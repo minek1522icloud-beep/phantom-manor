@@ -9,6 +9,14 @@
 .panel{padding:10px 14px;border:1px solid #bba2ec66;border-radius:14px;background:#16122bcf;backdrop-filter:blur(10px);box-shadow:0 3px 14px #0004}
 .brand{font-weight:900;letter-spacing:.07em;font-size:13px;color:#e7d8ff}.objective{font-size:12px;margin-top:5px;max-width:58vw;line-height:1.4;color:#e7e4f2}
 .stats{font-size:12px;white-space:nowrap;line-height:1.65;text-align:right}
+#capturePanel{position:fixed;z-index:5;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 91px);transform:translateX(-50%) translateY(-8px);width:min(300px,64vw);padding:9px 12px;border:1px solid #94e8ff90;border-radius:13px;background:#102a41e8;box-shadow:0 8px 30px #10213588;backdrop-filter:blur(9px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+#capturePanel.active{opacity:1;transform:translateX(-50%) translateY(0)}
+#captureName{font-size:13px;font-weight:800;color:#d9faff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#captureHint{font-size:10px;color:#a9cfdb;display:block;padding-top:3px}
+#captureTrack{height:9px;border-radius:9px;overflow:hidden;border:1px solid #a9e7ff77;background:#071b2d;margin-top:7px}
+#captureFill{height:100%;width:0%;border-radius:9px;background:linear-gradient(90deg,#46e8ee,#b0ffff);transition:width .09s linear;box-shadow:0 0 10px #a0ffffaa}
+#sound{position:fixed;z-index:3;top:calc(max(10px,env(safe-area-inset-top)) + 93px);right:55px;border:1px solid #ffffff55;background:#2d2441bd;color:white;border-radius:10px;padding:7px 10px}
+@media(max-width:430px){#capturePanel{top:calc(max(10px,env(safe-area-inset-top)) + 103px);width:min(300px,74vw)}}
 #toast{position:fixed;z-index:5;top:25%;left:50%;transform:translateX(-50%);min-width:170px;max-width:86vw;padding:12px 18px;background:#241b3de6;border:1px solid #e0c5ff77;border-radius:16px;text-align:center;font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 #mobile{position:fixed;z-index:4;inset:0;pointer-events:none}
 #stick{position:absolute;bottom:max(25px,env(safe-area-inset-bottom));left:24px;width:132px;height:132px;border-radius:50%;background:#c6aaff2a;border:2px solid #d7c6ff80;pointer-events:auto;touch-action:none}
@@ -29,8 +37,9 @@
 <body>
 <div id="game"></div>
 <div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego dworu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
-<button id="fullscreen" aria-label="Pełny ekran">⛶</button>
+<button id="fullscreen" aria-label="Pełny ekran">⛶</button><button id="sound" aria-label="Przełącz dźwięk">🔊</button>
 <div id="toast"></div>
+<div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
 <div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Oryginalna mini-gra 3D. Odkryj magazyn, znajdź klucz, otwórz salę balową i schwytaj cztery duchy. Uważaj na bossa!</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
 <div id="errors"></div>
@@ -211,7 +220,8 @@ function makeGhost(x,z,kind){
  let ghost={
   g:root,animated,body,skin,arms,mouth,kind,baseX:x,baseZ:z,
   hp:preset.hp,max:preset.hp,boss:kind==='boss',alive:true,
-  phase:Math.random()*6.28,scared:false,hitPulse:0
+  phase:Math.random()*6.28,scared:false,hitPulse:0,
+  captureCharge:0,velocity:new THREE.Vector3(),pulling:false
  };
  ghosts.push(ghost);return ghost;
 }
@@ -220,6 +230,202 @@ makeGhost(0,-10.5,'whisper');
 makeGhost(-11,-20,'brute');
 makeGhost(-8,-24.5,'trickster');
 makeGhost(1,-21,'boss');
+// Dynamiczna wiązka wciągania i lekka pula cząsteczek (bez dużej liczby alokacji).
+const suctionBeam=new THREE.Mesh(
+  new THREE.CylinderGeometry(.43,.075,1,16,1,true),
+  new THREE.MeshBasicMaterial({color:0x6beeff,transparent:true,opacity:.16,
+    blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})
+);
+scene.add(suctionBeam);suctionBeam.visible=false;
+const particleCanvas=document.createElement('canvas');particleCanvas.width=64;particleCanvas.height=64;
+const pc=particleCanvas.getContext('2d');
+const pg=pc.createRadialGradient(32,32,0,32,32,31);
+pg.addColorStop(0,'rgba(255,255,255,1)');pg.addColorStop(.32,'rgba(255,255,255,.9)');
+pg.addColorStop(1,'rgba(255,255,255,0)');
+pc.fillStyle=pg;pc.fillRect(0,0,64,64);
+const particleTexture=new THREE.CanvasTexture(particleCanvas);
+const particleMaterial=new THREE.SpriteMaterial({
+  map:particleTexture,color:0x77e8ff,transparent:true,opacity:.92,
+  depthWrite:false,blending:THREE.AdditiveBlending
+});
+const suctionParticles=Array.from({length:26},()=>{let p=new THREE.Sprite(particleMaterial);p.visible=false;scene.add(p);return p;});
+const captureFlash=new THREE.Sprite(new THREE.SpriteMaterial({
+ map:particleTexture,color:0xf4e0ff,transparent:true,opacity:0,
+ depthWrite:false,blending:THREE.AdditiveBlending
+}));
+scene.add(captureFlash);captureFlash.visible=false;
+let vacuumTarget=null,captureBurst=0,emptyVacuumNotice=0;
+const capturePanel=document.getElementById('capturePanel');
+const captureName=document.getElementById('captureName'),captureFill=document.getElementById('captureFill');
+const captureHint=document.getElementById('captureHint');
+// Dźwięk syntetyczny, bez zewnętrznych plików; w Safari uruchamiany kliknięciem ZAGRAJ.
+let audioContext=null,suctionOsc=null,suctionGain=null,audioEnabled=true;
+function initVacuumAudio(){
+  if(audioContext)return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    audioContext=new AC();
+    suctionGain=audioContext.createGain();suctionGain.gain.value=0;
+    suctionGain.connect(audioContext.destination);
+    suctionOsc=audioContext.createOscillator();suctionOsc.type='sawtooth';
+    const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=250;
+    suctionOsc.connect(filter);filter.connect(suctionGain);suctionOsc.frequency.value=83;suctionOsc.start();
+  }catch(e){audioContext=null;}
+}
+function vacuumAudio(active,intensity){
+  if(!audioContext||!suctionGain||!suctionOsc)return;
+  const now=audioContext.currentTime;
+  suctionGain.gain.setTargetAtTime(active&&audioEnabled?.018:0,now,.055);
+  suctionOsc.frequency.setTargetAtTime(84+intensity*125,now,.11);
+}
+document.getElementById('sound').addEventListener('click',()=>{
+ audioEnabled=!audioEnabled;
+ document.getElementById('sound').textContent=audioEnabled?'🔊':'🔇';
+ if(audioContext&&audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+});
+function lineOfSight(x1,z1,x2,z2){
+ const count=Math.max(2,Math.ceil(Math.hypot(x2-x1,z2-z1)/.30));
+ for(let i=1;i<count;i++){
+  const f=i/count;
+  if(!walkable(x1+(x2-x1)*f,z1+(z2-z1)*f))return false;
+ }
+ return true;
+}
+function targetGhost(){
+ const x=hero.position.x,z=hero.position.z;
+ let best=null,bestDistance=5.8;
+ for(const g of ghosts){
+   if(!g.alive)continue;
+   const d=Math.hypot(g.g.position.x-x,g.g.position.z-z);
+   if(d<bestDistance&&lineOfSight(x,z,g.g.position.x,g.g.position.z)){best=g;bestDistance=d;}
+ }
+ return best;
+}
+function updateVacuumFx(g,t,dt){
+ const nozzle=new THREE.Vector3(hero.position.x+aim.x*.83,1.10,hero.position.z+aim.z*.83);
+ if(g){
+  const source=new THREE.Vector3(g.g.position.x,g.g.position.y+1.03,g.g.position.z);
+  const vec=source.clone().sub(nozzle),length=vec.length();
+  suctionBeam.visible=true;suctionBeam.position.copy(nozzle).addScaledVector(vec,.5);
+  suctionBeam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),vec.clone().normalize());
+  suctionBeam.scale.set(.85,length,.85);
+  suctionBeam.material.opacity=.12+.08*Math.sin(t*18)**2;
+  const tone=ghostColors[g.kind].tone;
+  particleMaterial.color.setHex(tone);suctionBeam.material.color.setHex(tone);
+  suctionParticles.forEach((p,i)=>{
+   const u=(t*(.95+g.captureCharge*.7)+i/suctionParticles.length)%1;
+   const k=1-u,helix=t*9+i*2.4;
+   p.visible=true;
+   p.position.copy(source).lerp(nozzle,u);
+   p.position.x+=Math.sin(helix)*k*.2;
+   p.position.y+=Math.cos(helix*.67)*k*.14;
+   p.position.z+=Math.cos(helix)*k*.2;
+   const size=(.11+k*.21)*(1-g.captureCharge*.3);
+   p.scale.set(size,size,size);
+  });
+ }else{
+  suctionBeam.visible=false;
+  suctionParticles.forEach(p=>p.visible=false);
+ }
+ if(captureBurst>0){
+  captureBurst=Math.max(0,captureBurst-dt);
+  captureFlash.visible=true;
+  captureFlash.material.opacity=captureBurst*.8;
+  captureFlash.scale.setScalar(1.1+(1-captureBurst)*3.3);
+ }else captureFlash.visible=false;
+}
+function finishGhost(g){
+ g.alive=false;g.pulling=false;g.g.visible=false;
+ const x=g.g.position.x,z=g.g.position.z;
+ captureFlash.position.set(x,1.35,z);captureBurst=.95;
+ scene.remove(g.g);
+ caught++;
+ say(g.boss?'👑 Wielki Maestro schwytany!':'👻 '+ghostColors[g.kind].name+' schwytany!');
+ updateHud();
+ vacuumTarget=null;
+ if(caught===4){
+  complete=true;obj.textContent='Dwór oczyszczony! 🎉';
+  setTimeout(()=>{
+   center.style.display='flex';
+   center.querySelector('h1').innerHTML='ZWYCIĘSTWO!';
+   center.querySelector('p').textContent='Złapano wszystkie duchy i oczyszczono PHANTOM MANOR!';
+   start.textContent='▶ ZAGRAJ PONOWNIE';
+   start.onclick=()=>location.reload();
+  },800);
+ }
+}
+function updateVacuum(dt,t){
+ if(!playing||complete){vacuumTarget=null;capturePanel.classList.remove('active');vacuumAudio(false,0);updateVacuumFx(null,t,dt);return;}
+ if(input.vac){
+   if(!vacuumTarget||!vacuumTarget.alive||dist(vacuumTarget.g.position,hero.position)>6.3||
+      !lineOfSight(hero.position.x,hero.position.z,vacuumTarget.g.position.x,vacuumTarget.g.position.z))
+      vacuumTarget=targetGhost();
+ }else vacuumTarget=null;
+ for(const g of ghosts){
+  if(!g.alive)continue;
+  const pulling=g===vacuumTarget;
+  g.pulling=pulling;
+  if(pulling){
+   const dx=hero.position.x-g.g.position.x,dz=hero.position.z-g.g.position.z;
+   const length=Math.max(.001,Math.hypot(dx,dz));
+   const resistance=g.kind==='boss'?.72:g.kind==='brute'?.81:1;
+   const force=8.3*resistance+g.captureCharge*5;
+   const side=Math.sin(t*10.5+g.phase)*(1-g.captureCharge)*2.7;
+   g.velocity.x+=(dx/length*force-dz/length*side)*dt;
+   g.velocity.z+=(dz/length*force+dx/length*side)*dt;
+   // Gwałtowniejsze szarpnięcia cięższych duchów dają poczucie oporu.
+   const drag=Math.exp(-3.4*dt);
+   g.velocity.multiplyScalar(drag);
+   const maxSpeed=g.kind==='boss'?2.7:3.8;
+   const magnitude=g.velocity.length();
+   if(magnitude>maxSpeed)g.velocity.multiplyScalar(maxSpeed/magnitude);
+   if(length>1.05){
+    const nx=g.g.position.x+g.velocity.x*dt,nz=g.g.position.z+g.velocity.z*dt;
+    if(walkable(nx,g.g.position.z))g.g.position.x=nx;else g.velocity.x=0;
+    if(walkable(g.g.position.x,nz))g.g.position.z=nz;else g.velocity.z=0;
+   }else g.velocity.multiplyScalar(Math.exp(-9*dt));
+   // Wciąganie trwa kilka sekund; końcowy fragment wymaga zbliżenia ducha do dyszy.
+   const duration=g.kind==='boss'?5.7:g.kind==='brute'?3.8:2.75;
+   const close=Math.max(.35,1-Math.max(0,length-1.2)*.10);
+   g.captureCharge=Math.min(length<1.55?1:.94,g.captureCharge+dt/duration*close);
+   g.hitPulse=t;
+   if(g.captureCharge>=.999&&length<1.62)finishGhost(g);
+  }else{
+   g.velocity.multiplyScalar(Math.exp(-4*dt));
+   g.captureCharge=Math.max(0,g.captureCharge-dt*.065);
+   const pace=g.kind==='brute'?.53:g.kind==='trickster'?1.2:.77;
+   const xx=g.baseX+Math.sin(t*pace+g.phase)*(g.kind==='boss'?.42:.72);
+   const zz=g.baseZ+Math.cos(t*pace*.8+g.phase)*.64;
+   g.g.position.x+=(xx-g.g.position.x)*Math.min(1,dt*.72);
+   g.g.position.z+=(zz-g.g.position.z)*Math.min(1,dt*.72);
+  }
+  g.g.position.y=.12+Math.sin(t*2.2+g.phase)*(pulling?.10:.18);
+  g.g.rotation.y=Math.sin(t*.8+g.phase)*.32;
+  const strain=pulling?Math.sin(t*20+g.phase)*.19*(1-g.captureCharge*.6):0;
+  g.animated.rotation.z=Math.sin(t*1.6+g.phase)*.075+strain;
+  const size=ghostColors[g.kind].scale*(1+Math.sin(t*2.6+g.phase)*.025);
+  const squeeze=pulling?Math.min(.64,g.captureCharge*.54):0;
+  g.animated.scale.set(size*(1-squeeze),size*(1+squeeze*.5),size*(1-squeeze*.72));
+  g.arms[0].rotation.z=.30*Math.sin(t*(pulling?13:3.1)+g.phase);
+  g.arms[1].rotation.z=-.30*Math.sin(t*(pulling?13:3.1)+g.phase+1.2);
+  g.skin.emissiveIntensity=pulling?.95+.3*Math.sin(t*24)**2:.47+.12*Math.sin(t*3+g.phase);
+  if(g.kind==='trickster')g.skin.opacity=pulling?.88:.65+Math.sin(t*2.4+g.phase)*.19;
+ }
+ const g=vacuumTarget?.alive?vacuumTarget:null;
+ capturePanel.classList.toggle('active',!!g);
+ if(g){
+  captureName.textContent='🌀 Wciąganie: '+ghostColors[g.kind].name;
+  captureFill.style.width=Math.round(g.captureCharge*100)+'%';
+  captureHint.textContent=g.captureCharge>.84?'Utrzymaj strumień, duch prawie schwytany!':
+    'Przytrzymaj i nie oddalaj się od ducha';
+ }else if(input.vac&&t>emptyVacuumNotice+4){
+  emptyVacuumNotice=t;say('🌀 Zbliż się do ducha, aby rozpocząć wciąganie.',1.6);
+ }
+ vacuumAudio(!!g,g?.captureCharge||0);
+ updateVacuumFx(g,t,dt);
+}
+
 const input={up:false,down:false,left:false,right:false,run:false,vac:false};
 let joy={x:0,z:0},hasKey=false,caught=0,playing=false,complete=false,flashOn=false,heldAction=false;
 const obj=document.getElementById('objective'),stats=document.getElementById('stats'),toast=document.getElementById('toast');
@@ -256,7 +462,7 @@ function resetStick(){stickId=null;joy.x=joy.z=0;nub.style.transform='';}
 stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);stick.addEventListener('lostpointercapture',resetStick);
 document.getElementById('fullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>say('Na iPhonie użyj Safari → Udostępnij → Do ekranu początkowego.'));});
 start.disabled=false;start.textContent='▶ ZAGRAJ';
-start.addEventListener('click',()=>{playing=true;center.style.display='none';say('Witamy! Idź na północ do magazynu i zdobądź klucz.',4);updateHud();});
+start.addEventListener('click',()=>{initVacuumAudio();audioContext?.resume().catch(()=>{});playing=true;center.style.display='none';say('Witamy! Idź na północ do magazynu i zdobądź klucz.',4);updateHud();});
 updateHud();
 let clock=new THREE.Clock(),aim=new THREE.Vector3(0,0,-1),lastTime=performance.now();
 function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04),t=performance.now()/1000;
@@ -264,26 +470,12 @@ if(playing&&!complete){
 let vx=(input.right?1:0)-(input.left?1:0)+joy.x,vz=(input.down?1:0)-(input.up?1:0)+joy.z;
 let m=Math.hypot(vx,vz);
 if(m>.08){vx/=Math.max(1,m);vz/=Math.max(1,m);let speed=(input.run?6:4)*dt;let x=hero.position.x+vx*speed,z=hero.position.z+vz*speed;if(walkable(x,hero.position.z))hero.position.x=x;if(walkable(hero.position.x,z))hero.position.z=z;aim.set(vx,0,vz).normalize();}
-const near=ghosts.filter(g=>g.alive).sort((a,b)=>dist(a.g.position,hero.position)-dist(b.g.position,hero.position))[0];
-if(input.vac&&near&&dist(near.g.position,hero.position)<5.5){aim.set(near.g.position.x-hero.position.x,0,near.g.position.z-hero.position.z).normalize();}
+// Automatyczne naprowadzanie w promieniu działania – wygodne również na ekranie dotykowym.
+if(input.vac&&(!vacuumTarget||!vacuumTarget.alive))vacuumTarget=targetGhost();
+if(input.vac&&vacuumTarget?.alive)aim.set(
+ vacuumTarget.g.position.x-hero.position.x,0,vacuumTarget.g.position.z-hero.position.z).normalize();
 hero.rotation.y=Math.atan2(aim.x,aim.z);
-if(input.vac&&near&&dist(near.g.position,hero.position)<4.6){
-near.hp-=dt;near.hitPulse=t;near.animated.rotation.z+=Math.sin(t*29)*.11;near.skin.emissiveIntensity=1.0;
-if(near.hp<=0){near.alive=false;scene.remove(near.g);caught++;say(near.boss?'👑 Wielki Maestro schwytany!':'👻 '+ghostColors[near.kind].name+' schwytany!');updateHud();
-if(caught===4){complete=true;obj.textContent='Dwór oczyszczony! 🎉';setTimeout(()=>{center.style.display='flex';center.querySelector('h1').innerHTML='ZWYCIĘSTWO!';center.querySelector('p').textContent='Udało Ci się złapać cztery duchy i oczyścić PHANTOM MANOR!';start.textContent='▶ ZAGRAJ PONOWNIE';start.onclick=()=>location.reload();},700);}}}
-for(let g of ghosts)if(g.alive){
- let pace=g.kind==='brute'?.53:g.kind==='trickster'?1.2:.77;
- g.g.position.x=g.baseX+Math.sin(t*pace+g.phase)*(g.kind==='boss'?.42:.72);
- g.g.position.z=g.baseZ+Math.cos(t*pace*.8+g.phase)*.64;
- g.g.position.y=.12+Math.sin(t*2.2+g.phase)*.18;
- g.g.rotation.y=Math.sin(t*.8+g.phase)*.32;
- g.animated.rotation.z=Math.sin(t*1.6+g.phase)*.075;
- g.arms[0].rotation.z=.30*Math.sin(t*3.1+g.phase);
- g.arms[1].rotation.z=-.30*Math.sin(t*3.1+g.phase+1.2);
- g.animated.scale.setScalar(ghostColors[g.kind].scale*(1+Math.sin(t*2.6+g.phase)*.025));
- g.skin.emissiveIntensity=.47+Math.sin(t*3+g.phase)*.12;
- if(g.kind==='trickster')g.skin.opacity=.65+Math.sin(t*2.4+g.phase)*.19;
-}
+updateVacuum(dt,t);
 keyGroup.position.y=Math.sin(t*2)*.18;keyGroup.rotation.y=t*1.7;
 }
 flashlight.target.position.copy(aim).multiplyScalar(6).add(new THREE.Vector3(0,1,0));
