@@ -193,7 +193,7 @@ function chandelier(x,z,big=false){
   let px=Math.sin(a)*radius,pz=Math.cos(a)*radius;
   const stem=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.29,7),brass);
   stem.position.set(px,-.03,pz);group.add(stem);
-  let bulb=sphere(px,-.2,pz,.12,fixtureGold,group);bulb.scale.set(1,1.4,1);
+  let bulb=sphere(px,-.2,pz,.12,fixtureGold,group);bulb.scale.set(.12,.18,.12);
  }
  const light=new THREE.PointLight(0xffd6a0,big?2.6:1.9,big?11:8,2);
  light.position.set(0,-.2,0);group.add(light);hotelLights.push(light);
