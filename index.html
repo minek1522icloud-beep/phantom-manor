@@ -38,12 +38,12 @@
 </head>
 <body>
 <div id="game"></div>
-<div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego dworu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
+<div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego hotelu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
 <button id="fullscreen" aria-label="Pełny ekran">⛶</button><button id="sound" aria-label="Przełącz dźwięk">🔊</button>
 <div id="toast"></div>
 <div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
-<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Oryginalna mini-gra 3D. Odkryj magazyn, znajdź klucz, otwórz salę balową i schwytaj cztery duchy. Uważaj na bossa!</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj tajemnice nawiedzonego hotelu! Przejdź przez recepcję i hotelowe korytarze, znajdź klucz, odblokuj salę balową i schwytaj cztery duchy.</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
 <div id="errors"></div>
 <script type="module">
 (async function(){
@@ -159,7 +159,7 @@ function sconce(x,z,facingZ=1){
  const shade=new THREE.Mesh(new THREE.CylinderGeometry(.19,.29,.36,8),
    new THREE.MeshStandardMaterial({color:0xffe2aa,emissive:0xffb965,emissiveIntensity:1.25,transparent:true,opacity:.9}));
  shade.position.set(x,2.09,z+.12*facingZ);scene.add(shade);
- const l=new THREE.PointLight(0xffca86,1.1,4,2);l.position.copy(shade.position);scene.add(l);hotelLights.push(l);
+ // Emissive wall lights keep Safari fast without expensive dynamic spot lighting.
 }
 for(const r of rooms){
  // Victorian wall trims and panel rhythm (all decorative, no collisions).
@@ -593,11 +593,11 @@ function finishGhost(g){
  updateHud();
  vacuumTarget=null;
  if(caught===4){
-  complete=true;obj.textContent='Dwór oczyszczony! 🎉';
+  complete=true;obj.textContent='Hotel oczyszczony! 🎉';
   setTimeout(()=>{
    center.style.display='flex';
    center.querySelector('h1').innerHTML='ZWYCIĘSTWO!';
-   center.querySelector('p').textContent='Złapano wszystkie duchy i oczyszczono PHANTOM MANOR!';
+   center.querySelector('p').textContent='Złapano wszystkie duchy i oczyszczono nawiedzony hotel PHANTOM MANOR!';
    start.textContent='▶ ZAGRAJ PONOWNIE';
    start.onclick=()=>location.reload();
   },800);
@@ -715,7 +715,9 @@ updateHud();
 let clock=new THREE.Clock(),aim=new THREE.Vector3(0,0,-1),lastTime=performance.now();
 function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04),t=performance.now()/1000;
 if(playing&&!complete){
-let vx=(input.right?1:0)-(input.left?1:0)+joy.x,vz=(input.down?1:0)-(input.up?1:0)+joy.z;
+// Screen-relative controls follow the fixed, cinematic hotel camera.
+let sx=(input.right?1:0)-(input.left?1:0)+joy.x,sy=(input.down?1:0)-(input.up?1:0)+joy.z;
+let vx=sx*.96+sy*.27,vz=-sx*.27+sy*.96;
 let m=Math.hypot(vx,vz);
 if(m>.08){vx/=Math.max(1,m);vz/=Math.max(1,m);let speed=(input.run?6:4)*dt;let x=hero.position.x+vx*speed,z=hero.position.z+vz*speed;if(walkable(x,hero.position.z))hero.position.x=x;if(walkable(hero.position.x,z))hero.position.z=z;aim.set(vx,0,vz).normalize();}
 // Automatyczne naprowadzanie w promieniu działania – wygodne również na ekranie dotykowym.
