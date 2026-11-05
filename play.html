@@ -37,6 +37,13 @@
 #center{position:fixed;inset:0;z-index:10;background:radial-gradient(circle at 50% 35%,#38274f,#0d0b1b 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px}
 #center h1{font-size:clamp(35px,8vw,66px);line-height:.96;letter-spacing:.04em;margin:12px 0;text-shadow:0 0 32px #ac79f7}
 #center p{max-width:540px;line-height:1.55;color:#e5daf3;font-size:15px}
+#previewStart{display:block;margin-top:12px;border:1px solid #d4b5ec88;border-radius:16px;background:#49336c;color:#fff;font-size:15px;font-weight:800;padding:11px 22px}
+#modelStageUi{display:none;position:fixed;inset:0;z-index:11;pointer-events:none;text-align:center}
+#modelStageUi.open{display:block}
+#modelStageUi .modelTitle{position:absolute;top:max(22px,env(safe-area-inset-top));left:0;right:0;font:700 clamp(20px,4vw,30px) Georgia,serif;color:#fbeaca;text-shadow:0 2px 12px #000}
+#modelStageUi .modelButtons{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:10px;right:10px;display:flex;justify-content:center;gap:8px;pointer-events:auto;flex-wrap:wrap}
+.modelButton{border:1px solid #e0c79e;border-radius:13px;background:#513869f0;color:white;padding:13px 17px;font-size:14px;font-weight:800}
+.modelButton.main{background:#7d4d86}
 #start{background:linear-gradient(115deg,#8455d1,#bf78ed);color:#fff;border:0;padding:15px 33px;border-radius:18px;font-size:18px;font-weight:900;box-shadow:0 10px 35px #7032e680;margin-top:14px}
 #center small{margin-top:20px;color:#bfb2d7;font-size:12px;max-width:430px}
 #errors{position:fixed;z-index:20;bottom:12px;left:8px;right:8px;text-align:center;color:#ffcdc4;font-size:13px;pointer-events:none}
@@ -59,7 +66,16 @@
 </div>
 <div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
-<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj trzy piętra nawiedzonego hotelu! Wsiądź do windy w lobby, eksploruj apartamenty i korytarze, a potem schwytaj osiem duchów.</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj trzy piętra nawiedzonego hotelu! Wsiądź do windy w lobby, eksploruj apartamenty i korytarze, a potem schwytaj osiem duchów.</p><button id="start" disabled>ŁADOWANIE…</button>
+<button id="previewStart" disabled>👤 ZOBACZ MODEL LUIGIEGO — ETAP 1</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<div id="modelStageUi">
+ <div class="modelTitle">👤 LUIGI — MODEL 3D • ETAP 1</div>
+ <div class="modelButtons">
+  <button class="modelButton" id="modelTurnLeft">↶ OBRÓĆ</button>
+  <button class="modelButton" id="modelTurnRight">OBRÓĆ ↷</button>
+  <button class="modelButton main" id="modelBack">← WRÓĆ DO GRY</button>
+ </div>
+</div>
 <div id="errors"></div>
 <script type="module">
 (async function(){
@@ -551,23 +567,25 @@ for(let r of rooms){
 // Zaokraglony, autorski low-poly bohater 3D w klimacie przygody w nawiedzonym hotelu.
 const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,2);
 const heroRig=new THREE.Group();hero.add(heroRig);
+heroRig.scale.set(1.10,1.13,1.10); // smukle, wysokie proporcje jak u Luigiego
+
 const heroMats={
- shirt:new THREE.MeshStandardMaterial({color:0x28904e,roughness:.64}),
- darkGreen:new THREE.MeshStandardMaterial({color:0x17623e,roughness:.64}),
- cap:new THREE.MeshStandardMaterial({color:0x24844b,roughness:.58}),
- pants:new THREE.MeshStandardMaterial({color:0x3153a3,roughness:.74}),
+ shirt:new THREE.MeshStandardMaterial({color:0x18a241,roughness:.63}),
+ darkGreen:new THREE.MeshStandardMaterial({color:0x146e27,roughness:.57}),
+ cap:new THREE.MeshStandardMaterial({color:0x16a93d,roughness:.53}),
+ pants:new THREE.MeshStandardMaterial({color:0x205dbb,roughness:.75}),
  seam:new THREE.MeshStandardMaterial({color:0x9bafd1,roughness:.65}),
- skin:new THREE.MeshStandardMaterial({color:0xe8b693,roughness:.81}),
+ skin:new THREE.MeshStandardMaterial({color:0xf1c6a3,roughness:.79}),
  cheek:new THREE.MeshStandardMaterial({color:0xe1a182,roughness:.76}),
  glove:new THREE.MeshStandardMaterial({color:0xf1eddf,roughness:.48}),
- shoe:new THREE.MeshStandardMaterial({color:0x3c242a,roughness:.73}),
+ shoe:new THREE.MeshStandardMaterial({color:0x5a3529,roughness:.73}),
  sole:new THREE.MeshStandardMaterial({color:0x1b1820,roughness:.84}),
- hair:new THREE.MeshStandardMaterial({color:0x2e2023,roughness:.88}),
+ hair:new THREE.MeshStandardMaterial({color:0x36201c,roughness:.87}),
  eyes:new THREE.MeshStandardMaterial({color:0xfcfff6,roughness:.3}),
  iris:new THREE.MeshStandardMaterial({color:0x31645d,roughness:.3}),
  pupil:new THREE.MeshStandardMaterial({color:0x101721,roughness:.22}),
  brass:new THREE.MeshStandardMaterial({color:0xf7d08a,metalness:.62,roughness:.36}),
- vacuum:new THREE.MeshStandardMaterial({color:0x4a345f,metalness:.4,roughness:.4}),
+ vacuum:new THREE.MeshStandardMaterial({color:0x9b293b,metalness:.48,roughness:.37}),
  vacuumGlow:new THREE.MeshStandardMaterial({color:0x8cf1f3,emissive:0x3ba8c5,emissiveIntensity:.65,metalness:.35,roughness:.34})
 };
 function characterMesh(geometry,material,parent,x,y,z,sx=1,sy=1,sz=1){
@@ -586,42 +604,74 @@ const heroBody=new THREE.Group();heroRig.add(heroBody);
 heroBall(heroMats.shirt,heroBody,0,1.12,0,.41,.63,.35);
 heroBall(heroMats.pants,heroBody,0,.78,.12,.43,.40,.355);
 heroBall(heroMats.pants,heroBody,0,1.03,.285,.30,.34,.088);
+heroBall(heroMats.seam,heroBody,0,1.04,.374,.17,.10,.012);
+heroBall(heroMats.pants,heroBody,0,1.050,.391,.153,.091,.017);
 // Szelki: subtelnie zaokraglone zamiast prostokatnych paskow.
 for(const side of [-1,1]){
  const strap=heroBall(heroMats.pants,heroBody,side*.225,1.22,.29,.104,.32,.07);
  strap.rotation.z=-side*.13;
  heroBall(heroMats.brass,heroBody,side*.24,1.015,.355,.067,.068,.041);
 }
-// Glowa i ruchome oczy z mruganiem.
+// ETAP 1: rozpoznawalna, zaokraglona twarz Luigiego: policzki, duzy nos, wasy, uszy, czapka z L.
 const heroHead=new THREE.Group();heroHead.position.set(0,1.83,0);heroBody.add(heroHead);
-heroBall(heroMats.skin,heroHead,0,0,0,.44,.47,.40);
+heroBall(heroMats.skin,heroHead,0,0,0,.428,.482,.405);
+heroBall(heroMats.cheek,heroHead,0,-.285,.124,.325,.179,.279); // podbrodek
+// Wlosy i baki, widoczne rowniez z bokow i z tylu.
+heroBall(heroMats.hair,heroHead,0,.10,-.29,.382,.347,.205);
 for(const side of [-1,1]){
- heroBall(heroMats.skin,heroHead,side*.405,-.045,-.018,.095,.14,.095);
- heroBall(heroMats.cheek,heroHead,side*.29,-.18,.279,.135,.08,.058);
+ heroBall(heroMats.skin,heroHead,side*.43,-.055,-.01,.119,.154,.091);
+ heroBall(heroMats.cheek,heroHead,side*.298,-.145,.283,.128,.101,.078);
+ let sideburn=heroBall(heroMats.hair,heroHead,side*.365,-.105,-.036,.081,.209,.108);
+ sideburn.rotation.z=-side*.20;
 }
 const blinkEyes=[];
 for(const side of [-1,1]){
- const eye=heroBall(heroMats.eyes,heroHead,side*.16,.07,.351,.125,.19,.085);
- heroBall(heroMats.iris,eye,0,-.07,.93,.42,.56,.28);
- heroBall(heroMats.pupil,eye,0,-.10,1.09,.23,.36,.18);
- blinkEyes.push(eye);
- const brow=heroBall(heroMats.hair,heroHead,side*.17,.305,.336,.13,.042,.055);
- brow.rotation.z=-side*.12;
+ const eyePivot=new THREE.Group();eyePivot.position.set(side*.16,.068,.342);
+ heroHead.add(eyePivot);
+ const sclera=heroBall(heroMats.eyes,eyePivot,0,0,0,.128,.188,.106);
+ const iris=heroBall(heroMats.iris,eyePivot,0,-.022,.103,.061,.105,.037);
+ heroBall(heroMats.pupil,eyePivot,.010,-.028,.135,.034,.070,.020);
+ heroBall(heroMats.eyes,eyePivot,-.017,.040,.150,.018,.026,.012);
+ blinkEyes.push(eyePivot);
+ let brow=heroBall(heroMats.hair,heroHead,side*.171,.304,.365,.148,.054,.067);
+ brow.rotation.z=-side*.17;
 }
-heroBall(heroMats.skin,heroHead,0,-.12,.416,.18,.17,.16);
-// Dwa zaokraglone pasma wasow i delikatna kreska ust.
+// Luigi jest rozpoznawalny po wysunietym okraglym nosie.
+heroBall(heroMats.skin,heroHead,0,-.10,.495,.205,.172,.242);
+heroBall(heroMats.cheek,heroHead,-.014,-.134,.703,.063,.033,.032);
+// Duze wasy z czterech zakrzywionych fragmentow.
 for(const side of [-1,1]){
- const moustache=heroBall(heroMats.hair,heroHead,side*.11,-.277,.388,.163,.074,.084);
- moustache.rotation.z=side*.17;
+ let inner=heroBall(heroMats.hair,heroHead,side*.118,-.284,.438,.153,.077,.082);
+ inner.rotation.z=side*.25;
+ let wing=heroBall(heroMats.hair,heroHead,side*.265,-.266,.398,.124,.064,.065);
+ wing.rotation.z=-side*.39;
+ let tip=heroBall(heroMats.hair,heroHead,side*.336,-.235,.382,.064,.048,.054);
+ tip.rotation.z=side*.55;
 }
-heroBall(heroMats.hair,heroHead,0,-.36,.393,.075,.023,.025);
-// Czapka wlasnej postaci: zielona, z symbolem gwiazdki zamiast cudzego logo.
-heroBall(heroMats.cap,heroHead,0,.383,-.014,.459,.226,.44);
-heroBall(heroMats.darkGreen,heroHead,0,.31,.225,.45,.073,.29);
-heroBall(heroMats.cap,heroHead,0,.435,-.05,.42,.16,.38);
-const heroBadge=heroBall(heroMats.glove,heroHead,0,.426,.410,.151,.127,.034);
-const heroStar=new THREE.Mesh(new THREE.IcosahedronGeometry(.086,0),heroMats.darkGreen);
-heroStar.position.set(0,.429,.455);heroHead.add(heroStar);heroStar.scale.set(.9,.86,.24);
+heroBall(heroMats.hair,heroHead,0,-.383,.406,.105,.028,.027);
+// Czapka z wysokim, miekkim denkiem, daszkiem i bialym kolkiem z litera L.
+heroBall(heroMats.cap,heroHead,0,.418,-.028,.474,.249,.448);
+heroBall(heroMats.darkGreen,heroHead,0,.307,.278,.459,.062,.274);
+heroBall(heroMats.cap,heroHead,0,.477,-.065,.432,.158,.410);
+heroBall(heroMats.glove,heroHead,0,.444,.445,.168,.144,.038);
+// Dwustronny znaczek, czytelny na iPhonie.
+const luigiBadgeCanvas=document.createElement('canvas');
+luigiBadgeCanvas.width=256;luigiBadgeCanvas.height=256;
+const luigiBadgeCtx=luigiBadgeCanvas.getContext('2d');
+luigiBadgeCtx.clearRect(0,0,256,256);
+luigiBadgeCtx.fillStyle='#ffffff';
+luigiBadgeCtx.beginPath();luigiBadgeCtx.arc(128,128,117,0,2*Math.PI);luigiBadgeCtx.fill();
+luigiBadgeCtx.fillStyle='#168c32';
+luigiBadgeCtx.font='900 168px Arial';
+luigiBadgeCtx.textAlign='center';luigiBadgeCtx.textBaseline='middle';
+luigiBadgeCtx.fillText('L',128,139);
+const luigiBadgeTexture=new THREE.CanvasTexture(luigiBadgeCanvas);
+luigiBadgeTexture.colorSpace=THREE.SRGBColorSpace;
+const luigiBadge=new THREE.Mesh(
+ new THREE.PlaneGeometry(.31,.31),
+ new THREE.MeshBasicMaterial({map:luigiBadgeTexture,transparent:true,depthWrite:false,side:THREE.DoubleSide})
+);
+luigiBadge.position.set(0,.444,.489);heroHead.add(luigiBadge);
 // Buty, nogi i obrot wokol stawu biodrowego.
 const heroLegs=[];
 for(const side of [-1,1]){
@@ -639,6 +689,10 @@ for(const side of [-1,1]){
  sleeve.rotation.z=side*.22;
  heroBall(heroMats.glove,arm,side*.26,-.47,.034,.175,.175,.16);
  heroBall(heroMats.glove,arm,side*.19,-.48,.16,.09,.11,.10);
+ // Osobne palce i wypukly mankiet zamiast kulistej piesci.
+ heroBall(heroMats.glove,arm,side*.26,-.31,.015,.163,.088,.16);
+ for(let k=-1;k<=1;k++)
+  heroBall(heroMats.glove,arm,side*(.20+k*.055),-.60,.075,.049,.091,.060);
  heroArms.push(arm);
 }
 // Wlasny odkurzacz duchow na plecach, z paskami i niebieskim zbiornikiem energii.
@@ -1070,13 +1124,64 @@ stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)moveStick(e);}
 function resetStick(){stickId=null;joy.x=joy.z=0;nub.style.transform='';}
 stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);stick.addEventListener('lostpointercapture',resetStick);
 document.getElementById('fullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>say('Na iPhonie użyj Safari → Udostępnij → Do ekranu początkowego.'));});
+// Tryb prezentacji postaci: czysty podglad 3D z przodu, z bokow i z tylu.
+const modelPreviewButton=document.getElementById('previewStart');
+const modelStageUi=document.getElementById('modelStageUi');
+const modelStage=new THREE.Group();scene.add(modelStage);
+modelStage.position.set(151,0,0);
+const stageBase=new THREE.Mesh(new THREE.CylinderGeometry(1.30,1.52,.18,28),
+ new THREE.MeshStandardMaterial({color:0x503c6b,metalness:.36,roughness:.43}));
+stageBase.position.y=-.13;modelStage.add(stageBase);
+const stageRing=new THREE.Mesh(new THREE.TorusGeometry(1.18,.042,8,36),
+ new THREE.MeshBasicMaterial({color:0xd6b26d}));
+stageRing.rotation.x=Math.PI/2;stageRing.position.y=-.029;modelStage.add(stageRing);
+const stageLight=new THREE.PointLight(0xffffff,5,11,1.6);
+stageLight.position.set(2,4,4);modelStage.add(stageLight);
+let modelPreview=false,modelOrbit=0,modelReturnRot=0;
+const modelReturnPos=new THREE.Vector3();
+function openModelPreview(){
+ modelReturnPos.copy(hero.position);modelReturnRot=hero.rotation.y;
+ modelPreview=true;modelOrbit=0;
+ hero.position.copy(modelStage.position);
+ hero.rotation.y=0;heroMotion=0;
+ center.style.display='none';
+ modelStageUi.classList.add('open');
+ document.getElementById('hud').style.display='none';
+ document.getElementById('mobile').style.display='none';
+ document.getElementById('floorBadge').style.display='none';
+ document.getElementById('fullscreen').style.display='none';
+ document.getElementById('sound').style.display='none';
+ zoneTag.style.display='none';
+ camera.position.set(151,2.5,7.0);camera.lookAt(151,1.4,0);
+ say('Model Luigiego: obróć postać, aby obejrzeć wszystkie strony.',2.3);
+}
+function closeModelPreview(){
+ modelPreview=false;hero.position.copy(modelReturnPos);hero.rotation.y=modelReturnRot;
+ modelStageUi.classList.remove('open');
+ document.getElementById('hud').style.display='';
+ document.getElementById('mobile').style.display='';
+ document.getElementById('floorBadge').style.display='';
+ document.getElementById('fullscreen').style.display='';
+ document.getElementById('sound').style.display='';
+ zoneTag.style.display='';
+ if(!playing)center.style.display='flex';
+ cameraRoomIndex=-1;
+ cameraFocus.set(hero.position.x,1.1,hero.position.z);
+ cameraPosition.set(hero.position.x,6.7,hero.position.z+16.5);
+}
+modelPreviewButton.addEventListener('click',openModelPreview);
+document.getElementById('modelBack').addEventListener('click',closeModelPreview);
+document.getElementById('modelTurnLeft').addEventListener('click',()=>{modelOrbit-=Math.PI/4;});
+document.getElementById('modelTurnRight').addEventListener('click',()=>{modelOrbit+=Math.PI/4;});
+
 start.disabled=false;start.textContent='▶ ZAGRAJ';
+modelPreviewButton.disabled=false;
 start.addEventListener('click',()=>{initVacuumAudio();audioContext?.resume().catch(()=>{});playing=true;center.style.display='none';say('Witamy w hotelu! Znajdź windę po lewej stronie lobby. Odwiedź trzy piętra.',4);updateHud();});
 updateHud();
 let clock=new THREE.Clock(),aim=new THREE.Vector3(0,0,-1),lastTime=performance.now(),previousLiftHint=false;
 let heroMotion=0;
 function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04),t=performance.now()/1000;
-if(playing&&!complete&&!floorPicker.classList.contains('open')){
+if(playing&&!complete&&!floorPicker.classList.contains('open')&&!modelPreview){
 // Screen-relative controls follow the fixed, cinematic hotel camera.
 let sx=(input.right?1:0)-(input.left?1:0)+joy.x,sy=(input.down?1:0)-(input.up?1:0)+joy.z;
 let vx=sx,vz=sy;
@@ -1102,10 +1207,15 @@ if(!!nearbyElevator()!==previousLiftHint){
 }
 keyGroup.position.y=Math.sin(t*2)*.18;keyGroup.rotation.y=t*1.7;
 }
-animateHero(dt,t,heroMotion,playing&&input.vac);
+if(!modelPreview)animateHero(dt,t,heroMotion,playing&&input.vac);
 flashlight.target.position.copy(aim).multiplyScalar(6).add(new THREE.Vector3(0,1,0));
 beam.visible=playing&&(flashOn||input.vac);if(beam.visible){let beamDir=aim.clone().normalize();beam.position.set(hero.position.x+beamDir.x*2.4,1.25,hero.position.z+beamDir.z*2.4);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(beamDir.x,0,beamDir.z));beam.material.color.setHex(input.vac?0x9ee5f6:0xfff5bc);beam.material.opacity=input.vac?.15:.08;}
-hotelCamera(dt);
+if(modelPreview){
+ hero.rotation.y+=(modelOrbit-hero.rotation.y)*(1-Math.exp(-9*dt));
+ animateHero(dt,t,0,false);
+ camera.position.set(151+Math.sin(t*.18)*.12,2.95,7.25);
+ camera.lookAt(151,1.38,0);
+}else hotelCamera(dt);
 for(const c of chandeliers)c.group.rotation.y=Math.sin(t*.5+c.phase)*.07;
 if(performance.now()>toastUntil)toast.style.opacity='0';renderer.render(scene,camera);
 }
