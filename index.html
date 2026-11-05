@@ -68,18 +68,18 @@ let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js');}
 catch(e){start.textContent='Nie można załadować gry';msg.textContent='Sprawdź połączenie z internetem i odśwież stronę.';return;}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x110d20);scene.fog=new THREE.FogExp2(0x110d20,.017);
-const camera=new THREE.OrthographicCamera(-12,12,7, -7,.1,120);
+// Filmowa kamera z delikatna perspektywa: stale patrzy na pokoj od frontu.
+const camera=new THREE.PerspectiveCamera(36,window.innerWidth/window.innerHeight,.1,150);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.45));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;
 document.getElementById('game').appendChild(renderer.domElement);
 function resize(){
- const w=window.innerWidth,h=window.innerHeight;
- const portrait=h>w;
- const half=portrait?9.8:w<900?11.25:12.3;
- const vertical=half*h/w;
- camera.left=-half;camera.right=half;camera.top=vertical;camera.bottom=-vertical;
- camera.updateProjectionMatrix();renderer.setSize(w,h);
+ const w=Math.max(1,window.innerWidth),h=Math.max(1,window.innerHeight);
+ camera.aspect=w/h;
+ camera.updateProjectionMatrix();
+ renderer.setSize(w,h);
 }
+window.addEventListener('orientationchange',()=>setTimeout(resize,150));
 window.addEventListener('resize',resize);resize();
 scene.add(new THREE.HemisphereLight(0xbeb7ec,0x3f2846,2.5));
 const moon=new THREE.DirectionalLight(0xb9b4ff,1.1);moon.position.set(-12,22,-17);scene.add(moon);
@@ -423,7 +423,7 @@ function moveToFloor(level){
  nub.style.transform='';
  cameraRoomIndex=-1;
  cameraFocus.set(hero.position.x,.8,hero.position.z);
- cameraPosition.set(hero.position.x+1.75,9.3,hero.position.z+20.5);
+ cameraPosition.set(hero.position.x,6.6,hero.position.z+16.5);
  camera.position.copy(cameraPosition);
  capturePanel.classList.remove('active');
  floorBadge.textContent='🏨 '+floors[level].short;
@@ -447,49 +447,104 @@ function findCameraRoom(){
  let idx=rooms.findIndex(r=>Math.abs(hero.position.x-r.x)<r.w/2+.06&&Math.abs(hero.position.z-r.z)<r.d/2+.06);
  return idx>=0?idx:Math.max(0,cameraRoomIndex);
 }
+// Widok pokojowy jak w filmowej grze: kamera prawie na wprost, bez obracania.
+const cameraUp=new THREE.Vector3(0,1,0);
 function hotelCamera(dt){
  const i=findCameraRoom(),r=rooms[i];
  if(i!==cameraRoomIndex){
   cameraRoomIndex=i;
   zoneTag.textContent='✦ '+r.n.toUpperCase()+' ✦';
-  zoneTag.classList.remove('visible');void zoneTag.offsetWidth;zoneTag.classList.add('visible');
-  zoneUntil=performance.now()+2600;
+  zoneTag.classList.remove('visible');void zoneTag.offsetWidth;
+  zoneTag.classList.add('visible');
+  zoneUntil=performance.now()+2500;
+  // Pokaz tapete, obrazy i okna na tylnej scianie wlasciwego pokoju.
+  if(typeof roomBackdrops!=='undefined')
+   roomBackdrops.forEach(b=>b.group.visible=b.room===r);
  }
  if(performance.now()>zoneUntil)zoneTag.classList.remove('visible');
- // Fixed, slightly elevated front angle; smoothly follow the current room.
- const blend=.60;
- const tx=hero.position.x*(1-blend)+r.x*blend;
- const tz=hero.position.z*.42+r.z*.58;
- cameraFocus.set(
-  cameraFocus.x+(tx-cameraFocus.x)*(1-Math.exp(-4.0*dt)),
-  .87,
-  cameraFocus.z+(tz-cameraFocus.z)*(1-Math.exp(-4.0*dt))
- );
  const portrait=window.innerHeight>window.innerWidth;
- const offset=new THREE.Vector3(portrait?1.2:1.75,portrait?10.5:9.3,portrait?22.5:20.5);
- const wanted=cameraFocus.clone().add(offset);
- cameraPosition.lerp(wanted,1-Math.exp(-3.5*dt));
- camera.position.copy(cameraPosition);camera.lookAt(cameraFocus);
- // Zoom breathes slightly between rooms, without a jump cut.
- const targetZoom=(r.d>10?.93:1)*(portrait?.94:1);
- camera.zoom+=(targetZoom-camera.zoom)*(1-Math.exp(-3.6*dt));
- camera.updateProjectionMatrix();
- // Camera-facing wall hides when it would obstruct the character.
+ const aspect=Math.max(.35,window.innerWidth/window.innerHeight);
+ // W szerokim widoku kamera kadruje caly pokoj i zostaje w miejscu.
+ // W pionie sledzi tylko ruch poziomy, zeby postac nie uciekala poza ekran.
+ const roomMargin=Math.max(1.7,r.w*.12);
+ const horizontalFov=Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov)*.5)*aspect);
+ const fullRoomDistance=(r.w*.5+roomMargin)/Math.tan(horizontalFov);
+ const distance=portrait?17.2:Math.max(15.3,Math.min(19.4,fullRoomDistance));
+ const maxPan=Math.max(.2,r.w/2-2.3);
+ const panX=portrait?THREE.MathUtils.clamp(hero.position.x-r.x,-maxPan,maxPan):0;
+ const desiredX=r.x+panX;
+ const desiredZ=r.z;
+ const k=1-Math.exp(-3.3*dt);
+ cameraFocus.x+=(desiredX-cameraFocus.x)*k;
+ cameraFocus.y+=(1.10-cameraFocus.y)*k;
+ cameraFocus.z+=(desiredZ-cameraFocus.z)*k;
+ // Nisko ustawiona, lekko podniesiona kamera - bez lotu ptaka i bez skretu.
+ const eyeHeight=portrait?5.3:5.6;
+ const wanted=new THREE.Vector3(cameraFocus.x,cameraFocus.y+eyeHeight,cameraFocus.z+distance);
+ cameraPosition.lerp(wanted,1-Math.exp(-3.2*dt));
+ camera.position.copy(cameraPosition);
+ camera.up.copy(cameraUp);
+ camera.lookAt(cameraFocus);
  for(const wall of decorativeFrontWalls){
-  const dx=wall.position.x-hero.position.x,dz=wall.position.z-hero.position.z;
-  const close=Math.hypot(dx,dz)<5.5;
-  const desired=close?.05:.20;
-  wall.material.opacity+=(desired-wall.material.opacity)*(1-Math.exp(-5*dt));
+  const distanceToPlayer=Math.hypot(wall.position.x-hero.position.x,wall.position.z-hero.position.z);
+  const sameRoom=wall.userData.room===r;
+  const wantedOpacity=sameRoom?.035:distanceToPlayer<4?.025:.14;
+  wall.material.opacity+=(wantedOpacity-wall.material.opacity)*(1-Math.exp(-7*dt));
  }
 }
-cameraFocus.set(0,.8,0);
-cameraPosition.set(1.75,9.3,20.5);
+cameraFocus.set(0,1.1,0);
+cameraPosition.set(0,6.7,15.3);
 camera.position.copy(cameraPosition);camera.lookAt(cameraFocus);
+// Ozdobne tylne sciany: dzieki nim hotel widac jak teatralna scenografie,
+// a nie z gory jak plansze. Przerwy zachowuja przejscia miedzy pokojami.
+const roomBackdrops=[];
+const panelMaterials=[
+  0x6b405a,0x514260,0x645248,0x484063,0x69405d
+];
+rooms.forEach((r,idx)=>{
+ const backZ=r.z-r.d*.5+.12;
+ const group=new THREE.Group();scene.add(group);
+ const wallpaper=new THREE.MeshStandardMaterial({
+  color:panelMaterials[idx%5],roughness:.94,side:THREE.DoubleSide
+ });
+ const section=(x,width)=>{
+   block(x,1.55,backZ,width,3.05,.16,wallpaper,group);
+   block(x,.27,backZ+.1,width,.13,.12,mats.wood,group);
+   block(x,2.75,backZ+.12,width,.10,.11,mats.gold,group);
+   for(let xx=x-width*.5+.62;xx<x+width*.5-.28;xx+=1.3)
+    block(xx,1.49,backZ+.11,.065,1.85,.09,mats.gold,group);
+ };
+ const hasDoor=(idx%5===0||idx%5===2);
+ if(hasDoor){
+  const opening=3.2,remain=(r.w-opening)/2;
+  section(r.x-(r.w+opening)/4,remain);
+  section(r.x+(r.w+opening)/4,remain);
+  // Zlote nadproze nad wejsciem do sasiedniego pomieszczenia.
+  block(r.x,2.85,backZ,opening,.32,.17,mats.gold,group);
+ }else section(r.x,r.w-.42);
+ const frameColor=new THREE.MeshStandardMaterial({color:0xb88a4d,metalness:.48,roughness:.35});
+ // Dekoracje dobrane do danego pokoju, bez blokowania przejsc.
+ for(const xx of [r.x-r.w*.30,r.x+r.w*.30]){
+  const portrait=new THREE.Group();group.add(portrait);
+  portrait.position.set(xx,1.67,backZ+.19);
+  block(0,0,0,.88,1.08,.12,frameColor,portrait);
+  const art=new THREE.MeshStandardMaterial({
+    color:idx%2===0?0x4c618e:0x845b8d,roughness:.8,
+    emissive:idx%2===0?0x151e3c:0x351d45,emissiveIntensity:.12
+  });
+  block(0,0,.092,.68,.88,.04,art,portrait);
+  block(0,-.27,.125,.40,.055,.03,mats.gold,portrait);
+ }
+ group.visible=false;
+ roomBackdrops.push({room:r,group});
+});
+
 // Short wall facades in the foreground, translucent so gameplay remains readable.
 const decorativeFrontWalls=[];
 for(let r of rooms){
  const mat= new THREE.MeshStandardMaterial({color:0x5a374c,roughness:.82,transparent:true,opacity:.48,depthWrite:false});
- const wall=block(r.x,.41,r.z+r.d/2-.05,r.w-.55,.82,.18,mat);
+ const wall=block(r.x,.33,r.z+r.d/2-.05,r.w-.55,.63,.18,mat);
+ wall.userData.room=r;
  decorativeFrontWalls.push(wall);
 }
 
