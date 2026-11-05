@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#100d1d"><title>PHANTOM MANOR • Nawiedzony dwór</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0e0b1c;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}canvas{display:block;touch-action:none}
+#game{position:fixed;inset:0}#hud{position:fixed;z-index:3;top:max(10px,env(safe-area-inset-top));left:12px;right:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none}
+.panel{padding:10px 14px;border:1px solid #bba2ec66;border-radius:14px;background:#16122bcf;backdrop-filter:blur(10px);box-shadow:0 3px 14px #0004}
+.brand{font-weight:900;letter-spacing:.07em;font-size:13px;color:#e7d8ff}.objective{font-size:12px;margin-top:5px;max-width:58vw;line-height:1.4;color:#e7e4f2}
+.stats{font-size:12px;white-space:nowrap;line-height:1.65;text-align:right}
+#toast{position:fixed;z-index:5;top:25%;left:50%;transform:translateX(-50%);min-width:170px;max-width:86vw;padding:12px 18px;background:#241b3de6;border:1px solid #e0c5ff77;border-radius:16px;text-align:center;font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+#mobile{position:fixed;z-index:4;inset:0;pointer-events:none}
+#stick{position:absolute;bottom:max(25px,env(safe-area-inset-bottom));left:24px;width:132px;height:132px;border-radius:50%;background:#c6aaff2a;border:2px solid #d7c6ff80;pointer-events:auto;touch-action:none}
+#nub{position:absolute;width:56px;height:56px;left:38px;top:38px;border-radius:50%;background:#c4aff5a8;box-shadow:0 0 24px #9275e26e;pointer-events:none}
+.actions{position:absolute;bottom:max(24px,env(safe-area-inset-bottom));right:16px;display:grid;grid-template-columns:70px 70px;grid-template-rows:60px 60px;gap:10px;pointer-events:auto}
+.control{border:1px solid #d3baffaa;border-radius:20px;background:#5c477fb9;color:white;font-weight:800;box-shadow:0 4px 16px #0007;user-select:none;-webkit-user-select:none;font-size:12px;touch-action:none}
+.control:active,.control.pressed{background:#ad80e0}.control.primary{grid-row:1 / 3;grid-column:2;background:#703b9adc;font-size:14px}.control .emoji{display:block;font-size:22px;margin-bottom:3px}
+#center{position:fixed;inset:0;z-index:10;background:radial-gradient(circle at 50% 35%,#38274f,#0d0b1b 72%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px}
+#center h1{font-size:clamp(35px,8vw,66px);line-height:.96;letter-spacing:.04em;margin:12px 0;text-shadow:0 0 32px #ac79f7}
+#center p{max-width:540px;line-height:1.55;color:#e5daf3;font-size:15px}
+#start{background:linear-gradient(115deg,#8455d1,#bf78ed);color:#fff;border:0;padding:15px 33px;border-radius:18px;font-size:18px;font-weight:900;box-shadow:0 10px 35px #7032e680;margin-top:14px}
+#center small{margin-top:20px;color:#bfb2d7;font-size:12px;max-width:430px}
+#errors{position:fixed;z-index:20;bottom:12px;left:8px;right:8px;text-align:center;color:#ffcdc4;font-size:13px;pointer-events:none}
+#fullscreen{position:fixed;z-index:3;top:calc(max(10px,env(safe-area-inset-top)) + 93px);right:14px;border:1px solid #ffffff55;background:#2d2441bd;color:white;border-radius:10px;padding:7px 10px}
+@media(hover:hover) and (pointer:fine){#mobile{display:none}}@media(max-height:440px){#stick{width:108px;height:108px}#nub{left:27px;top:27px}.actions{grid-template-columns:62px 62px;grid-template-rows:50px 50px}#fullscreen{display:none}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego dworu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
+<button id="fullscreen" aria-label="Pełny ekran">⛶</button>
+<div id="toast"></div>
+<div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
+<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Oryginalna mini-gra 3D. Odkryj magazyn, znajdź klucz, otwórz salę balową i schwytaj cztery duchy. Uważaj na bossa!</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<div id="errors"></div>
+<script type="module">
+(async function(){
+const start=document.getElementById('start'), center=document.getElementById('center'), msg=document.getElementById('errors');
+let THREE;
+try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js');}
+catch(e){start.textContent='Nie można załadować gry';msg.textContent='Sprawdź połączenie z internetem i odśwież stronę.';return;}
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x090b17);scene.fog=new THREE.FogExp2(0x090b17,.025);
+const camera=new THREE.OrthographicCamera(-12,12,7, -7,.1,120);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;
+document.getElementById('game').appendChild(renderer.domElement);
+function resize(){let w=window.innerWidth,h=window.innerHeight;let half=window.innerWidth<560?10:13;let vertical=half*h/w;camera.left=-half;camera.right=half;camera.top=vertical;camera.bottom=-vertical;camera.updateProjectionMatrix();renderer.setSize(w,h);}window.addEventListener('resize',resize);resize();
+scene.add(new THREE.HemisphereLight(0x928adf,0x26223f,2.2));
+const moon=new THREE.DirectionalLight(0x9d9bff,1.5);moon.position.set(-12,22,-17);scene.add(moon);
+const mats={floor:new THREE.MeshStandardMaterial({color:0x3b3757,roughness:.96}),wall:new THREE.MeshStandardMaterial({color:0x615775,roughness:.87,transparent:true,opacity:.78}),rim:new THREE.MeshStandardMaterial({color:0x957fac,roughness:.8}),door:new THREE.MeshStandardMaterial({color:0x6d3f5f}),wood:new THREE.MeshStandardMaterial({color:0x624057}),gold:new THREE.MeshStandardMaterial({color:0xe9b96c,emissive:0x70481a,emissiveIntensity:.2}),book:new THREE.MeshStandardMaterial({color:0x393367}),purple:new THREE.MeshStandardMaterial({color:0x9f65d8,emissive:0x3a1d73,emissiveIntensity:.3})};
+const boxgeo=new THREE.BoxGeometry(1,1,1),ballgeo=new THREE.SphereGeometry(1,16,12);
+function block(x,y,z,w,h,d,mat,parent=scene){let m=new THREE.Mesh(boxgeo,mat);m.position.set(x,y,z);m.scale.set(w,h,d);parent.add(m);return m;}
+function sphere(x,y,z,s,mat,parent=scene){let m=new THREE.Mesh(ballgeo,mat);m.position.set(x,y,z);m.scale.set(s,s,s);parent.add(m);return m;}
+const rooms=[
+{n:'Hol',x:0,z:0,w:12,d:10,color:0x38334b},
+{n:'Korytarz',x:0,z:-10,w:10,d:10,color:0x383754},
+{n:'Magazyn',x:-10,z:-10,w:10,d:10,color:0x473848},
+{n:'Biblioteka',x:-10,z:-21,w:10,d:12,color:0x39344e},
+{n:'Sala balowa',x:1,z:-21,w:12,d:12,color:0x46375a}];
+rooms.forEach((r,i)=>{block(r.x,-.23,r.z,r.w,.42,r.d,new THREE.MeshStandardMaterial({color:r.color,roughness:.91}));let trim=mats.rim;block(r.x,-.015,r.z-r.d/2,r.w,.08,.15,trim);block(r.x,-.015,r.z+r.d/2,r.w,.08,.15,trim);});
+const walls=[];
+function wx(a,b,z){if(b<=a)return;block((a+b)/2,1.25,z,b-a,2.5,.3,mats.wall);walls.push({x:(a+b)/2,z,w:b-a,d:.3});}
+function wz(a,b,x){if(b<=a)return;block(x,1.25,(a+b)/2,.3,2.5,b-a,mats.wall);walls.push({x,z:(a+b)/2,w:.3,d:b-a});}
+wx(-6,-1.6,-5);wx(1.6,6,-5);wx(-6,6,5);wz(-5,5,-6);wz(-5,5,6);
+wx(-5,-1.6,-5);wx(1.6,5,-5);wx(-5,5,-15);wz(-15,-11.6,-5);wz(-8.4,-5,-5);wz(-15,-5,5);
+wx(-15,-11.6,-15);wx(-8.4,-5,-15);wx(-15,-5,-5);wz(-15,-5,-15);wz(-15,-11.6,-5);wz(-8.4,-5,-5);
+wx(-15,-5,-27);wx(-15,-11.6,-15);wx(-8.4,-5,-15);wz(-27,-15,-15);wz(-27,-22.6,-5);wz(-19.4,-15,-5);
+wx(-5,7,-27);wx(-5,7,-15);wz(-27,-22.6,-5);wz(-19.4,-15,-5);wz(-27,-15,7);
+let door=block(-5,1.25,-21,.5,2.5,3.05,mats.door);let doorOpen=false;
+function lamp(x,z,c){let l=new THREE.PointLight(c,4,9,2);l.position.set(x,2.6,z);scene.add(l);sphere(x,2.5,z,.15,new THREE.MeshBasicMaterial({color:c}));}
+lamp(0,0,0xe6c5ff);lamp(0,-10,0x98c9ff);lamp(-10,-10,0xffb879);lamp(-10,-21,0xbb97ff);lamp(1,-21,0xf0a7d7);
+function table(x,z){block(x,.42,z,2,.19,1,mats.wood);for(let i of [-.8,.8])for(let j of [-.36,.36])block(x+i,.2,z+j,.12,.4,.12,mats.wood);}
+table(3,1);table(-12,-10);table(3,-23);
+function shelf(x,z){block(x,.95,z,2.2,1.9,.55,mats.wood);for(let h of [.4,.95,1.5]){block(x,h,z+.30,2.1,.08,.12,mats.gold);for(let j=-4;j<=4;j++){let color=[0x8864c4,0xa66470,0x6299a2,0xa49467][(j+4)%4];block(x+j*.22,h+.24,z+.24,.15,.42,.13,new THREE.MeshStandardMaterial({color}));}}}
+shelf(-12,-18);shelf(-8,-25);
+for(let k=0;k<10;k++){let x=-14+((k*13)%9),z=-13+((k*7)%7);if(Math.hypot(x+10,z+10)<2)continue;block(x,.34,z,.65,.68,.68,mats.wood);}
+for(let j=0;j<6;j++){let a=j*Math.PI/3,x=1+3.7*Math.cos(a),z=-21+3.5*Math.sin(a);block(x,.15,z,.52,.3,.52,mats.purple);}
+const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,2);
+const coat=new THREE.MeshStandardMaterial({color:0x5fa49d,roughness:.7}),skin=new THREE.MeshStandardMaterial({color:0xf2cbac}),black=new THREE.MeshStandardMaterial({color:0x171427}),white=new THREE.MeshStandardMaterial({color:0xffffff});
+block(0,.8,0,.8,1.05,.55,coat,hero);sphere(0,1.48,0,.42,skin,hero);
+block(0,1.85,0,.82,.14,.85,black,hero);block(0,2,0,.65,.24,.65,black,hero);
+block(0,.26,.2,.24,.5,.25,black,hero);block(0,.26,-.2,.24,.5,.25,black,hero);
+block(0,1,-.45,.65,.82,.30,mats.wood,hero);
+block(.38,1.05,.10,.27,.27,.25,mats.gold,hero);
+const flashlight=new THREE.SpotLight(0xd9e5ff,0,11,Math.PI/5,.6,1.2);flashlight.position.set(0,1.5,0);hero.add(flashlight);
+const torchTarget=new THREE.Object3D();hero.add(torchTarget);flashlight.target=torchTarget;
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(.03,1,5,22,1,true),new THREE.MeshBasicMaterial({color:0xaaa8ff,transparent:true,opacity:.095,depthWrite:false,side:THREE.DoubleSide}));
+scene.add(beam);beam.visible=false;
+const keyGroup=new THREE.Group();scene.add(keyGroup);keyGroup.position.set(-10,0,-9.5);
+const keyMat=new THREE.MeshStandardMaterial({color:0xffd975,metalness:.7,roughness:.23,emissive:0xd18f19,emissiveIntensity:.6});
+sphere(0,1.2,0,.23,keyMat,keyGroup);block(.28,1.2,0,.65,.14,.12,keyMat,keyGroup);block(.55,1.05,0,.11,.28,.12,keyMat,keyGroup);
+const ghosts=[];
+function ghost(x,z,boss=false){
+const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+let mat=new THREE.MeshStandardMaterial({color:boss?0xec83da:0x76dbe0,emissive:boss?0x893e8b:0x2d8195,emissiveIntensity:.75,transparent:true,opacity:.85,roughness:.28});
+sphere(0,1.05,0,boss?.78:.57,mat,g);sphere(0,.7,0,boss?.63:.44,mat,g);
+for(let dx of [-.2,.2]){sphere(dx,1.16,.49,boss?.13:.10,white,g);sphere(dx,1.14,.58,.055,black,g);}
+if(boss){sphere(0,1.85,0,.28,mats.gold,g);block(0,2.02,0,.6,.09,.35,mats.gold,g);}
+let o={g,x,z,baseX:x,baseZ:z,hp:boss?7:2.2,max:boss?7:2.2,boss,alive:true,phase:Math.random()*6.28};ghosts.push(o);
+}
+ghost(0,-10.5);ghost(-11,-20);ghost(-8,-24.5);ghost(1,-21,true);
+const input={up:false,down:false,left:false,right:false,run:false,vac:false};
+let joy={x:0,z:0},hasKey=false,caught=0,playing=false,complete=false,flashOn=false,heldAction=false;
+const obj=document.getElementById('objective'),stats=document.getElementById('stats'),toast=document.getElementById('toast');
+let toastUntil=0;
+function say(s,seconds=2.5){toast.textContent=s;toast.style.opacity='1';toastUntil=performance.now()+seconds*1000;}
+function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
+function updateHud(){stats.innerHTML='👻 '+caught+'/4<br>🗝️ '+(hasKey?'1':'0');obj.textContent=complete?'Dwór oczyszczony! 🎉':!hasKey?'Znajdź złoty klucz w magazynie':doorOpen?'Złap wszystkie duchy, pokonaj bossa':'Znajdź drzwi do sali balowej i naciśnij DZIAŁAJ';}
+function nearDoor(){return Math.hypot(hero.position.x+5,hero.position.z+21)<2.9;}
+function action(){if(complete)return;
+if(!hasKey&&dist(hero.position,keyGroup.position)<2.5){hasKey=true;scene.remove(keyGroup);say('🗝️ Zdobyto złoty klucz!');updateHud();return;}
+if(!doorOpen&&nearDoor()){if(!hasKey){say('🔒 Potrzebujesz klucza z magazynu');return;}doorOpen=true;scene.remove(door);say('🚪 Drzwi do sali balowej otwarte!');updateHud();return;}
+say('Podejdź do klucza lub zamkniętych drzwi.');}
+function walkable(x,z){let inside=rooms.some(r=>x>r.x-r.w/2-.18&&x<r.x+r.w/2+.18&&z>r.z-r.d/2-.18&&z<r.z+r.d/2+.18);
+if(!inside)return false;for(const w of walls){if(Math.abs(x-w.x)<w.w/2+.31&&Math.abs(z-w.z)<w.d/2+.31)return false;}
+if(!doorOpen&&Math.abs(x+5)<.65&&Math.abs(z+21)<1.9)return false;return true;}
+function setLight(){flashOn=!flashOn;flashlight.intensity=flashOn?14:0;say(flashOn?'🔦 Latarka włączona':'🌙 Latarka wyłączona',1.4);}
+document.addEventListener('keydown',e=>{let k=e.key.toLowerCase();if('wasdarrowup arrowdown arrowleft arrowright'.includes(k)||k===' '){if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();}
+if(k==='w'||k==='arrowup')input.up=true;if(k==='s'||k==='arrowdown')input.down=true;if(k==='a'||k==='arrowleft')input.left=true;if(k==='d'||k==='arrowright')input.right=true;if(k==='shift')input.run=true;
+if(!e.repeat&&playing){if(k==='e')action();if(k==='f')setLight();if(k===' ')input.vac=true;}});
+document.addEventListener('keyup',e=>{let k=e.key.toLowerCase();if(k==='w'||k==='arrowup')input.up=false;if(k==='s'||k==='arrowdown')input.down=false;if(k==='a'||k==='arrowleft')input.left=false;if(k==='d'||k==='arrowright')input.right=false;if(k==='shift')input.run=false;if(k===' ')input.vac=false;});
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&playing)input.vac=true;});
+window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')input.vac=false;});
+window.addEventListener('blur',()=>{input.up=input.down=input.left=input.right=input.vac=false;joy.x=joy.z=0;});
+document.getElementById('action').addEventListener('click',action);
+document.getElementById('light').addEventListener('click',setLight);
+const vacuumBtn=document.getElementById('vacuum');vacuumBtn.addEventListener('pointerdown',e=>{e.preventDefault();vacuumBtn.setPointerCapture(e.pointerId);input.vac=true;vacuumBtn.classList.add('pressed');});
+function releaseVac(){input.vac=false;vacuumBtn.classList.remove('pressed');}
+vacuumBtn.addEventListener('pointerup',releaseVac);vacuumBtn.addEventListener('pointercancel',releaseVac);vacuumBtn.addEventListener('lostpointercapture',releaseVac);
+const stick=document.getElementById('stick'),nub=document.getElementById('nub');let stickId=null;
+function moveStick(e){let r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,d=Math.min(1,Math.hypot(dx,dy)/(r.width*.36));let a=Math.atan2(dy,dx);joy.x=Math.cos(a)*d;joy.z=Math.sin(a)*d;nub.style.transform='translate('+joy.x*(r.width*.29)+'px,'+joy.z*(r.width*.29)+'px)';}
+stick.addEventListener('pointerdown',e=>{e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
+function resetStick(){stickId=null;joy.x=joy.z=0;nub.style.transform='';}
+stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);stick.addEventListener('lostpointercapture',resetStick);
+document.getElementById('fullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>say('Na iPhonie użyj Safari → Udostępnij → Do ekranu początkowego.'));});
+start.disabled=false;start.textContent='▶ ZAGRAJ';
+start.addEventListener('click',()=>{playing=true;center.style.display='none';say('Witamy! Idź na północ do magazynu i zdobądź klucz.',4);updateHud();});
+updateHud();
+let clock=new THREE.Clock(),aim=new THREE.Vector3(0,0,-1),lastTime=performance.now();
+function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04),t=performance.now()/1000;
+if(playing&&!complete){
+let vx=(input.right?1:0)-(input.left?1:0)+joy.x,vz=(input.down?1:0)-(input.up?1:0)+joy.z;
+let m=Math.hypot(vx,vz);
+if(m>.08){vx/=Math.max(1,m);vz/=Math.max(1,m);let speed=(input.run?6:4)*dt;let x=hero.position.x+vx*speed,z=hero.position.z+vz*speed;if(walkable(x,hero.position.z))hero.position.x=x;if(walkable(hero.position.x,z))hero.position.z=z;aim.set(vx,0,vz).normalize();}
+const near=ghosts.filter(g=>g.alive).sort((a,b)=>dist(a.g.position,hero.position)-dist(b.g.position,hero.position))[0];
+if(input.vac&&near&&dist(near.g.position,hero.position)<5.5){aim.set(near.g.position.x-hero.position.x,0,near.g.position.z-hero.position.z).normalize();}
+hero.rotation.y=Math.atan2(aim.x,aim.z);
+if(input.vac&&near&&dist(near.g.position,hero.position)<4.6){
+near.hp-=dt;near.g.scale.setScalar(1+Math.sin(t*22)*.05);
+if(near.hp<=0){near.alive=false;scene.remove(near.g);caught++;say(near.boss?'👑 Boss schwytany!':'👻 Duch złapany!');updateHud();
+if(caught===4){complete=true;obj.textContent='Dwór oczyszczony! 🎉';setTimeout(()=>{center.style.display='flex';center.querySelector('h1').innerHTML='ZWYCIĘSTWO!';center.querySelector('p').textContent='Udało Ci się złapać cztery duchy i oczyścić PHANTOM MANOR!';start.textContent='▶ ZAGRAJ PONOWNIE';start.onclick=()=>location.reload();},700);}}}
+for(let g of ghosts)if(g.alive){g.g.position.x=g.baseX+Math.sin(t*.8+g.phase)*.75;g.g.position.z=g.baseZ+Math.cos(t*.6+g.phase)*.7;g.g.position.y=Math.sin(t*2+g.phase)*.18;g.g.rotation.y=Math.sin(t+g.phase)*.25;}
+keyGroup.position.y=Math.sin(t*2)*.18;keyGroup.rotation.y=t*1.7;
+}
+flashlight.target.position.copy(aim).multiplyScalar(6).add(new THREE.Vector3(0,1,0));
+beam.visible=playing&&(flashOn||input.vac);if(beam.visible){let beamDir=aim.clone().normalize();beam.position.set(hero.position.x+beamDir.x*2.4,1.25,hero.position.z+beamDir.z*2.4);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(beamDir.x,0,beamDir.z));beam.material.color.setHex(input.vac?0x9ee5f6:0xfff5bc);beam.material.opacity=input.vac?.15:.08;}
+let target=new THREE.Vector3(hero.position.x+8,17,hero.position.z+13);camera.position.lerp(target,1-Math.pow(.006,dt));camera.lookAt(hero.position.x,0,hero.position.z);
+if(performance.now()>toastUntil)toast.style.opacity='0';renderer.render(scene,camera);
+}
+loop();
+})();
+</script>
+</body></html>
