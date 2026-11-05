@@ -112,7 +112,7 @@ function action(){if(complete)return;
 if(!hasKey&&dist(hero.position,keyGroup.position)<2.5){hasKey=true;scene.remove(keyGroup);say('🗝️ Zdobyto złoty klucz!');updateHud();return;}
 if(!doorOpen&&nearDoor()){if(!hasKey){say('🔒 Potrzebujesz klucza z magazynu');return;}doorOpen=true;scene.remove(door);say('🚪 Drzwi do sali balowej otwarte!');updateHud();return;}
 say('Podejdź do klucza lub zamkniętych drzwi.');}
-function walkable(x,z){let inside=rooms.some(r=>x>r.x-r.w/2+.37&&x<r.x+r.w/2-.37&&z>r.z-r.d/2+.37&&z<r.z+r.d/2-.37);
+function walkable(x,z){let inside=rooms.some(r=>x>r.x-r.w/2-.18&&x<r.x+r.w/2+.18&&z>r.z-r.d/2-.18&&z<r.z+r.d/2+.18);
 if(!inside)return false;for(const w of walls){if(Math.abs(x-w.x)<w.w/2+.31&&Math.abs(z-w.z)<w.d/2+.31)return false;}
 if(!doorOpen&&Math.abs(x+5)<.65&&Math.abs(z+21)<1.9)return false;return true;}
 function setLight(){flashOn=!flashOn;flashlight.intensity=flashOn?14:0;say(flashOn?'🔦 Latarka włączona':'🌙 Latarka wyłączona',1.4);}
