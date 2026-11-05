@@ -742,7 +742,7 @@ function animateHero(dt,t,movement,isSucking){
  heroHead.rotation.x+=((isSucking?-.06:.02)-heroHead.rotation.x)*smooth;
  const blinkCycle=t%4.3;
  const blink=blinkCycle<.13?Math.max(.07,Math.abs(blinkCycle-.065)/.065):1;
- for(const eye of blinkEyes)eye.scale.y+=(.19*blink-eye.scale.y)*smooth;
+ for(const eye of blinkEyes)eye.scale.y+=(blink-eye.scale.y)*smooth;
  vacuumPack.rotation.z=Math.sin(t*8)*.024*(isSucking?1:.2);
 }
 const keyGroup=new THREE.Group();scene.add(keyGroup);keyGroup.position.set(-10,0,-9.5);
