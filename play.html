@@ -90,16 +90,136 @@ scene.add(beam);beam.visible=false;
 const keyGroup=new THREE.Group();scene.add(keyGroup);keyGroup.position.set(-10,0,-9.5);
 const keyMat=new THREE.MeshStandardMaterial({color:0xffd975,metalness:.7,roughness:.23,emissive:0xd18f19,emissiveIntensity:.6});
 sphere(0,1.2,0,.23,keyMat,keyGroup);block(.28,1.2,0,.65,.14,.12,keyMat,keyGroup);block(.55,1.05,0,.11,.28,.12,keyMat,keyGroup);
+// Autorskie modele duchów PHANTOM MANOR – lekkie modele proceduralne 3D.
 const ghosts=[];
-function ghost(x,z,boss=false){
-const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
-let mat=new THREE.MeshStandardMaterial({color:boss?0xec83da:0x76dbe0,emissive:boss?0x893e8b:0x2d8195,emissiveIntensity:.75,transparent:true,opacity:.85,roughness:.28});
-sphere(0,1.05,0,boss?.78:.57,mat,g);sphere(0,.7,0,boss?.63:.44,mat,g);
-for(let dx of [-.2,.2]){sphere(dx,1.16,.49,boss?.13:.10,white,g);sphere(dx,1.14,.58,.055,black,g);}
-if(boss){sphere(0,1.85,0,.28,mats.gold,g);block(0,2.02,0,.6,.09,.35,mats.gold,g);}
-let o={g,x,z,baseX:x,baseZ:z,hp:boss?7:2.2,max:boss?7:2.2,boss,alive:true,phase:Math.random()*6.28};ghosts.push(o);
+const ghostBodyGeometry=new THREE.LatheGeometry([
+ new THREE.Vector2(.035,.13),new THREE.Vector2(.16,.22),
+ new THREE.Vector2(.36,.44),new THREE.Vector2(.54,.68),
+ new THREE.Vector2(.72,.96),new THREE.Vector2(.82,1.24),
+ new THREE.Vector2(.78,1.48),new THREE.Vector2(.60,1.76),
+ new THREE.Vector2(.33,1.91),new THREE.Vector2(.02,1.94)
+],24);
+const ghostColors={
+ whisper:{name:'Mgiełek',tone:0x60e4ec,glow:0x137b9c,eyes:0x152855,hp:2.3,scale:.88},
+ brute:{name:'Bursztynek',tone:0xff746f,glow:0x9e273d,eyes:0x452131,hp:4.2,scale:1.15},
+ trickster:{name:'Błysk',tone:0xf2d765,glow:0x9a6a18,eyes:0x483927,hp:2.6,scale:.92},
+ boss:{name:'Wielki Maestro',tone:0xa66dff,glow:0x6734c0,eyes:0x23163b,hp:8,scale:1.36}
+};
+function ghostMat(color,glow,opacity=.87){
+ return new THREE.MeshStandardMaterial({
+   color,emissive:glow,emissiveIntensity:.53,roughness:.27,
+   metalness:0,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide
+ });
 }
-ghost(0,-10.5);ghost(-11,-20);ghost(-8,-24.5);ghost(1,-21,true);
+function ghostOrb(parent,x,y,z,sc,material){
+ const m=new THREE.Mesh(ballgeo,material);m.position.set(x,y,z);
+ m.scale.set(sc[0],sc[1],sc[2]);parent.add(m);return m;
+}
+function ghostRing(parent,x,y,z,r,material,rotation=0){
+ const m=new THREE.Mesh(new THREE.TorusGeometry(r,.055,8,24),material);
+ m.position.set(x,y,z);m.rotation.z=rotation;parent.add(m);return m;
+}
+function ghostArm(root,side,material,big=false){
+ const arm=new THREE.Group();
+ arm.position.set(side*.67,1.15,.02);root.add(arm);
+ let shape=new THREE.Mesh(new THREE.CapsuleGeometry(big?.21:.15,big?.35:.25,4,9),material);
+ shape.position.set(side*.25,-.12,.11);shape.rotation.z=side*(big?-.98:-.72);
+ arm.add(shape);
+ ghostOrb(arm,side*(big?.49:.43),-.30,.14,big?[.28,.25,.25]:[.19,.19,.19],material);
+ for(let k=-1;k<=1;k++){
+   ghostOrb(arm,side*(big?.55:.47)+k*.084,-.47,.15,[.077,.12,.083],material);
+ }
+ return arm;
+}
+function makeGhost(x,z,kind){
+ const preset=ghostColors[kind],root=new THREE.Group();
+ root.position.set(x,0,z);scene.add(root);
+ const animated=new THREE.Group();root.add(animated);
+ animated.scale.setScalar(preset.scale);
+ const skin=ghostMat(preset.tone,preset.glow);
+ const accent=ghostMat(preset.tone,preset.glow,.70);
+ const ink=new THREE.MeshBasicMaterial({color:preset.eyes});
+ const bright=new THREE.MeshBasicMaterial({color:0xfffafa});
+ const blush=new THREE.MeshBasicMaterial({color:0xffb6c6,transparent:true,opacity:.5,depthWrite:false});
+ const body=new THREE.Mesh(ghostBodyGeometry,skin);animated.add(body);
+ // Drobne, falujące końcówki ogona.
+ let tail=ghostOrb(animated,-.11,.3,-.1,[.26,.48,.23],accent);tail.rotation.z=.57;
+ for(let i=-1;i<=1;i++)ghostOrb(animated,i*.38,.38,-.08,[.17,.24,.23],accent);
+ const arms=[ghostArm(animated,-1,skin,kind==='brute'),ghostArm(animated,1,skin,kind==='brute')];
+ // Wyraziste twarze z osobnymi, trójwymiarowymi oczami i źrenicami.
+ const eyes=[];
+ for(let side of [-1,1]){
+   let eye=ghostOrb(animated,side*.265,1.43,.752,[.165,.24,.09],bright);
+   let pupil=ghostOrb(animated,side*.275,1.40,.838,[.066,.12,.035],ink);
+   ghostOrb(animated,side*.275-.025,1.46,.872,[.027,.048,.018],bright);
+   eyes.push({eye,pupil});
+   if(kind==='whisper')ghostOrb(animated,side*.42,1.2,.71,[.115,.068,.026],blush);
+ }
+ const mouth=ghostOrb(animated,0,1.08,.805,kind==='brute'?[.24,.19,.052]:[.155,.14,.038],ink);
+ if(kind==='whisper'){
+   const curl=new THREE.Mesh(new THREE.TorusGeometry(.18,.075,8,22,Math.PI*1.45),accent);
+   curl.position.set(-.14,1.94,.04);curl.rotation.z=-.5;animated.add(curl);
+   const bow=new THREE.MeshStandardMaterial({color:0x8b479e,roughness:.5});
+   ghostOrb(animated,-.13,.96,.79,[.16,.08,.045],bow);
+   ghostOrb(animated,.13,.96,.79,[.16,.08,.045],bow);
+   ghostOrb(animated,0,.96,.84,[.07,.075,.055],mats.gold);
+ }
+ if(kind==='brute'){
+   // Masywne pięści, ukośne brwi oraz komiczny pas majsterkowicza.
+   for(let side of [-1,1]){
+     const brow=block(side*.26,1.72,.785,.31,.115,.095,ink,animated);
+     brow.rotation.z=side*.25;
+   }
+   const belt=new THREE.MeshStandardMaterial({color:0x7f3c4c,roughness:.7});
+   block(0,.68,.66,1.12,.18,.20,belt,animated);
+   block(0,.68,.78,.26,.24,.1,mats.gold,animated);
+   ghostOrb(animated,-.46,.44,.20,[.22,.20,.20],accent);
+   ghostOrb(animated,.46,.44,.20,[.22,.20,.20],accent);
+ }
+ if(kind==='trickster'){
+   // Długie uszy-wstążki i trzy małe świetlne iskry nad głową.
+   for(let side of [-1,1]){
+     const fin=ghostOrb(animated,side*.72,1.37,0,[.17,.45,.24],accent);
+     fin.rotation.z=side*.5;
+   }
+   for(let i=-1;i<=1;i++){
+     let spark=ghostOrb(animated,i*.3,2.11+(i===0?.13:0),0,[.075,.15,.075],
+       new THREE.MeshBasicMaterial({color:0xffeb9d}));
+     spark.rotation.z=i*.35;
+   }
+   mouth.scale.set(.12,.08,.035);mouth.position.y=1.06;
+ }
+ if(kind==='boss'){
+   // Oryginalny teatralny płaszcz, kołnierz i magiczny klejnot.
+   const coat=ghostMat(0x6434a4,0x2e176b,.78);
+   for(let side of [-1,1]){
+     const cape=ghostOrb(animated,side*.62,.79,-.35,[.37,.70,.18],coat);
+     cape.rotation.z=side*.28;
+     let collar=ghostOrb(animated,side*.52,1.52,-.04,[.25,.30,.18],coat);
+     collar.rotation.z=side*.55;
+   }
+   const jewel=ghostOrb(animated,0,.99,.8,[.13,.18,.09],
+     new THREE.MeshBasicMaterial({color:0xffd2f7}));
+   jewel.rotation.z=Math.PI/4;
+   let crest=ghostOrb(animated,0,2.03,0,[.12,.24,.13],mats.gold);
+   for(let side of [-1,1]){
+     let horn=ghostOrb(animated,side*.29,1.99,0,[.11,.19,.11],mats.gold);
+     horn.rotation.z=-side*.4;
+   }
+   mouth.scale.set(.19,.11,.04);
+ }
+ let ghost={
+  g:root,animated,body,skin,arms,mouth,kind,baseX:x,baseZ:z,
+  hp:preset.hp,max:preset.hp,boss:kind==='boss',alive:true,
+  phase:Math.random()*6.28,scared:false,hitPulse:0
+ };
+ ghosts.push(ghost);return ghost;
+}
+// Cztery odmienne postacie: niebieski, koralowy, złoty i fioletowy boss.
+makeGhost(0,-10.5,'whisper');
+makeGhost(-11,-20,'brute');
+makeGhost(-8,-24.5,'trickster');
+makeGhost(1,-21,'boss');
 const input={up:false,down:false,left:false,right:false,run:false,vac:false};
 let joy={x:0,z:0},hasKey=false,caught=0,playing=false,complete=false,flashOn=false,heldAction=false;
 const obj=document.getElementById('objective'),stats=document.getElementById('stats'),toast=document.getElementById('toast');
@@ -148,10 +268,22 @@ const near=ghosts.filter(g=>g.alive).sort((a,b)=>dist(a.g.position,hero.position
 if(input.vac&&near&&dist(near.g.position,hero.position)<5.5){aim.set(near.g.position.x-hero.position.x,0,near.g.position.z-hero.position.z).normalize();}
 hero.rotation.y=Math.atan2(aim.x,aim.z);
 if(input.vac&&near&&dist(near.g.position,hero.position)<4.6){
-near.hp-=dt;near.g.scale.setScalar(1+Math.sin(t*22)*.05);
-if(near.hp<=0){near.alive=false;scene.remove(near.g);caught++;say(near.boss?'👑 Boss schwytany!':'👻 Duch złapany!');updateHud();
+near.hp-=dt;near.hitPulse=t;near.animated.rotation.z+=Math.sin(t*29)*.11;near.skin.emissiveIntensity=1.0;
+if(near.hp<=0){near.alive=false;scene.remove(near.g);caught++;say(near.boss?'👑 Wielki Maestro schwytany!':'👻 '+ghostColors[near.kind].name+' schwytany!');updateHud();
 if(caught===4){complete=true;obj.textContent='Dwór oczyszczony! 🎉';setTimeout(()=>{center.style.display='flex';center.querySelector('h1').innerHTML='ZWYCIĘSTWO!';center.querySelector('p').textContent='Udało Ci się złapać cztery duchy i oczyścić PHANTOM MANOR!';start.textContent='▶ ZAGRAJ PONOWNIE';start.onclick=()=>location.reload();},700);}}}
-for(let g of ghosts)if(g.alive){g.g.position.x=g.baseX+Math.sin(t*.8+g.phase)*.75;g.g.position.z=g.baseZ+Math.cos(t*.6+g.phase)*.7;g.g.position.y=Math.sin(t*2+g.phase)*.18;g.g.rotation.y=Math.sin(t+g.phase)*.25;}
+for(let g of ghosts)if(g.alive){
+ let pace=g.kind==='brute'?.53:g.kind==='trickster'?1.2:.77;
+ g.g.position.x=g.baseX+Math.sin(t*pace+g.phase)*(g.kind==='boss'?.42:.72);
+ g.g.position.z=g.baseZ+Math.cos(t*pace*.8+g.phase)*.64;
+ g.g.position.y=.12+Math.sin(t*2.2+g.phase)*.18;
+ g.g.rotation.y=Math.sin(t*.8+g.phase)*.32;
+ g.animated.rotation.z=Math.sin(t*1.6+g.phase)*.075;
+ g.arms[0].rotation.z=.30*Math.sin(t*3.1+g.phase);
+ g.arms[1].rotation.z=-.30*Math.sin(t*3.1+g.phase+1.2);
+ g.animated.scale.setScalar(ghostColors[g.kind].scale*(1+Math.sin(t*2.6+g.phase)*.025));
+ g.skin.emissiveIntensity=.47+Math.sin(t*3+g.phase)*.12;
+ if(g.kind==='trickster')g.skin.opacity=.65+Math.sin(t*2.4+g.phase)*.19;
+}
 keyGroup.position.y=Math.sin(t*2)*.18;keyGroup.rotation.y=t*1.7;
 }
 flashlight.target.position.copy(aim).multiplyScalar(6).add(new THREE.Vector3(0,1,0));
