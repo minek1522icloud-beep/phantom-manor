@@ -299,6 +299,144 @@ function pictureWall(x,z,txt){
  p.position.set(x,1.68,z);scene.add(p);block(x,1.68,z-.05,.99,1.03,.08,brass);
 }
 pictureWall(-3.35,-14.74,'101');pictureWall(3.35,-14.74,'102');
+// ─── THREE HOTEL FLOORS & INTERACTIVE ELEVATOR ───
+const originalRooms=rooms.slice(),originalWalls=walls.slice();
+originalRooms.forEach(r=>r.level=0);
+const floors=[
+ {label:'Parter',shift:0,short:'PARTER'},
+ {label:'Piętro 1',shift:42,short:'PIĘTRO 1'},
+ {label:'Piętro 2',shift:84,short:'PIĘTRO 2'}
+];
+const elevatorPoints=[];
+const floorBadge=document.getElementById('floorBadge');
+const floorPicker=document.getElementById('floorPicker');
+const floorChoices=document.getElementById('floorChoices');
+let currentFloor=0;
+function makeElevator(level){
+ const x=floors[level].shift-4.2,z=3.25;
+ elevatorPoints.push({level,x,z});
+ const bronze=decorMaterial(0x775373,.32,.45),elevatorDark=decorMaterial(0x31223f,.35,.55);
+ block(x,1.35,z+1.32,2.06,2.7,.25,brass);
+ block(x,1.31,z+1.48,1.75,2.43,.12,elevatorDark);
+ block(x-.43,1.30,z+1.565,.79,2.32,.06,bronze);
+ block(x+.43,1.30,z+1.565,.79,2.32,.06,bronze);
+ block(x,1.38,z+1.61,.05,2.18,.08,brass);
+ block(x-.77,1.30,z+1.63,.04,2.30,.05,brass);
+ block(x+.77,1.30,z+1.63,.04,2.30,.05,brass);
+ const call=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),
+  new THREE.MeshBasicMaterial({color:0xa8f2ff}));
+ call.position.set(x+1.2,1.15,z+1.6);scene.add(call);
+ let signCanvas=document.createElement('canvas');signCanvas.width=192;signCanvas.height=96;
+ let ctx=signCanvas.getContext('2d');ctx.fillStyle='#24152f';ctx.fillRect(0,0,192,96);
+ ctx.fillStyle='#f8d99c';ctx.textAlign='center';ctx.font='bold 28px Georgia';ctx.fillText('LIFT',96,36);
+ ctx.font='bold 24px Georgia';ctx.fillText(level===0?'0':String(level),96,72);
+ const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.55,.77),
+  new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signCanvas),side:THREE.DoubleSide}));
+ panel.position.set(x,2.93,z+1.61);scene.add(panel);
+ block(x,.07,z,.98,.12,1.05,brass);
+ block(x,.10,z,.62,.04,.8,teal);
+}
+makeElevator(0);
+for(let level=1;level<3;level++){
+ const shift=floors[level].shift;
+ const names=level===1?[
+  'Lobby piętra 1','Korytarz apartamentów','Pokój 101','Salon herbaciany','Apartament królewski'
+ ]:[
+  'Lobby piętra 2','Korytarz tajemnic','Pokój 201','Gabinet luster','Sala księżycowa'
+ ];
+ const accent=level===1?teal:velvet;
+ for(let i=0;i<originalRooms.length;i++){
+  const o=originalRooms[i],r={...o,x:o.x+shift,n:names[i],level};
+  rooms.push(r);
+  block(r.x,-.23,r.z,r.w,.42,r.d,decorMaterial(level===1?0x354c56:0x50405d));
+  const tx=makeFloorTexture(i===0?'lobby':i===2?'library':i===3?'library':i===4?'ball':'corridor');
+  tx.repeat.set(r.w/9,r.d/9);
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(r.w-.32,r.d-.32),
+    new THREE.MeshStandardMaterial({map:tx,roughness:.8}));
+  mesh.rotation.x=-Math.PI/2;mesh.position.set(r.x,.005,r.z);scene.add(mesh);
+  for(const z of [r.z-r.d/2+.3,r.z+r.d/2-.3])block(r.x,.08,z,r.w-.5,.16,.18,brass);
+  for(const x of [r.x-r.w/2+.28,r.x+r.w/2-.28])block(x,.08,r.z,.18,.16,r.d-.5,brass);
+  for(const z of [r.z-r.d/2+.42,r.z+r.d/2-.42]){
+   block(r.x,1.85,z,r.w-.6,.07,.09,brass);
+   for(let x=r.x-r.w/2+1.2;x<r.x+r.w/2-1;x+=2.1)
+    block(x,1.4,z,.07,1.13,.09,brass);
+  }
+ }
+ for(const w of originalWalls){
+  walls.push({...w,x:w.x+shift});
+  if(w.w>w.d)block(w.x+shift,.4,w.z,w.w,.8,w.d,mats.wall);
+  else block(w.x+shift,1.25,w.z,w.w,2.5,w.d,mats.wall);
+ }
+ hotelCarpet(shift,1,2.65,6.7,accent);
+ hotelCarpet(shift,-10,2.5,8.8,accent);
+ hotelCarpet(shift-10,-20.5,2.5,7.8,accent);
+ table(shift+3,-2.4);table(shift-12,-10);
+ shelf(shift-12,-18);shelf(shift-8,-25);
+ chandelier(shift,0,true);chandelier(shift,-10);chandelier(shift-10,-21);
+ if(level===1){
+  plant(shift+5,3);plant(shift-13,-23);
+  hotelWindow(shift-3.1,-4.7);hotelWindow(shift+3.1,-4.7);
+  for(const [bx,bz] of [[shift-11,-9.7],[shift+2,-21.5]]){
+   const bed=decorMaterial(0xb28b91,.05,.75);
+   block(bx,.40,bz,2.05,.50,2.2,mats.wood);
+   block(bx,.78,bz-.66,1.93,.20,1.5,bed);
+   block(bx,.85,bz-.15,1.85,.12,1.1,cream);
+   block(bx,.66,bz-1.0,2.18,.87,.20,burgundy);
+   for(const dx of [-.48,.48])block(bx+dx,.9,bz-.46,.7,.16,.38,cream);
+  }
+ }else{
+  hotelCarpet(shift+1,-21,4.0,8,velvet);
+  for(let i=0;i<4;i++){
+   const x=shift-3.6+i*2.4;
+   block(x,1.62,-26.5,1.2,1.85,.11,brass);
+   block(x,1.63,-26.35,.95,1.63,.045,new THREE.MeshBasicMaterial({color:0x7c8ec1}));
+  }
+  for(const [x,z] of [[shift-4,2.5],[shift+4,2.5],[shift-12,-23],[shift+4,-23]]){
+   const orb=sphere(x,2.15,z,.28,
+    new THREE.MeshStandardMaterial({color:0xb8a4fa,emissive:0x7361ca,emissiveIntensity:1.2}));
+   orb.scale.set(1,.8,1);
+  }
+ }
+ makeElevator(level);
+}
+function openElevator(){
+ floorChoices.innerHTML='';
+ floors.forEach((f,i)=>{
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='floorBtn'+(i===currentFloor?' current':'');
+  button.textContent=(i===0?'🏨 ':i===1?'🛎️ ':'🌙 ')+f.label+(i===currentFloor?' • JESTEŚ TUTAJ':'');
+  button.addEventListener('click',()=>moveToFloor(i));
+  floorChoices.appendChild(button);
+ });
+ floorPicker.classList.add('open');
+ input.vac=false;
+}
+function moveToFloor(level){
+ floorPicker.classList.remove('open');
+ if(level===currentFloor)return;
+ currentFloor=level;
+ const pos=elevatorPoints[level];
+ hero.position.set(pos.x+1.1,0,pos.z-1.2);
+ vacuumTarget=null;input.vac=false;joy.x=0;joy.z=0;
+ input.up=input.down=input.left=input.right=false;
+ nub.style.transform='';
+ cameraRoomIndex=-1;
+ cameraFocus.set(hero.position.x,.8,hero.position.z);
+ cameraPosition.set(hero.position.x+1.75,9.3,hero.position.z+20.5);
+ camera.position.copy(cameraPosition);
+ capturePanel.classList.remove('active');
+ floorBadge.textContent='🏨 '+floors[level].short;
+ say('🛗 Winda: '+floors[level].label+' — odkryj nowe pokoje!',3.2);
+ updateHud();
+}
+document.getElementById('closeFloor').addEventListener('click',()=>floorPicker.classList.remove('open'));
+floorPicker.addEventListener('click',e=>{if(e.target===floorPicker)floorPicker.classList.remove('open');});
+function nearbyElevator(){
+ return elevatorPoints.find(e=>e.level===currentFloor&&
+   Math.hypot(hero.position.x-e.x,hero.position.z-e.z)<2.4);
+}
+
 // Cinematic camera follows rooms, keeping much of the set visible.
 const cameraFocus=new THREE.Vector3(0,.8,0),cameraPosition=new THREE.Vector3();
 let cameraRoomIndex=-1;
