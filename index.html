@@ -9,6 +9,16 @@
 .panel{padding:10px 14px;border:1px solid #bba2ec66;border-radius:14px;background:#16122bcf;backdrop-filter:blur(10px);box-shadow:0 3px 14px #0004}
 .brand{font-weight:900;letter-spacing:.07em;font-size:13px;color:#e7d8ff}.objective{font-size:12px;margin-top:5px;max-width:58vw;line-height:1.4;color:#e7e4f2}
 .stats{font-size:12px;white-space:nowrap;line-height:1.65;text-align:right}
+#floorPicker{display:none;position:fixed;z-index:16;inset:0;background:#0c091bdc;align-items:center;justify-content:center;padding:16px}
+#floorPicker.open{display:flex}
+.floorCard{width:min(390px,92vw);padding:22px;border:2px solid #e8c88a77;border-radius:20px;background:linear-gradient(150deg,#32243f,#150f27);box-shadow:0 14px 55px #000a;text-align:center}
+.floorCard h2{font:700 27px Georgia,serif;color:#ffdfb1;margin:0 0 8px}
+.floorCard p{font-size:13px;line-height:1.5;color:#d8cfe0}
+.floorBtn{width:100%;margin:6px 0;padding:13px 10px;border:1px solid #e7c28d88;border-radius:12px;background:#62406b;color:#fff;font-weight:800;font-size:15px}
+.floorBtn.current{background:#885e47}
+.floorClose{margin-top:14px;border:1px solid #a899af;border-radius:12px;background:transparent;color:#fff;padding:9px 20px;font-weight:700}
+#floorBadge{position:fixed;z-index:3;top:calc(max(10px,env(safe-area-inset-top)) + 91px);left:12px;background:#261a39d9;border:1px solid #c4a76a77;border-radius:12px;padding:7px 12px;font-size:12px;font-weight:800;color:#f2d6a1;pointer-events:none}
+@media(max-height:490px){.floorCard{max-height:94vh;overflow-y:auto;padding:14px}.floorCard h2{font-size:22px}.floorBtn{padding:8px}}
 #capturePanel{position:fixed;z-index:5;left:50%;top:calc(max(10px,env(safe-area-inset-top)) + 91px);transform:translateX(-50%) translateY(-8px);width:min(300px,64vw);padding:9px 12px;border:1px solid #94e8ff90;border-radius:13px;background:#102a41e8;box-shadow:0 8px 30px #10213588;backdrop-filter:blur(9px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
 #capturePanel.active{opacity:1;transform:translateX(-50%) translateY(0)}
 #captureName{font-size:13px;font-weight:800;color:#d9faff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -40,7 +50,13 @@
 <div id="game"></div>
 <div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego hotelu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
 <button id="fullscreen" aria-label="Pełny ekran">⛶</button><button id="sound" aria-label="Przełącz dźwięk">🔊</button>
-<div id="toast"></div>
+<div id="toast"></div><div id="floorBadge">🏨 PARTER</div>
+<div id="floorPicker" role="dialog" aria-modal="true" aria-label="Winda hotelowa">
+ <div class="floorCard"><h2>🛗 Hotelowa winda</h2>
+ <p>Wybierz piętro PHANTOM HOTEL. Każdy poziom kryje nowe pokoje i duchy.</p>
+ <div id="floorChoices"></div>
+ <button class="floorClose" id="closeFloor">Zamknij</button></div>
+</div>
 <div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
 <div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj tajemnice nawiedzonego hotelu! Przejdź przez recepcję i hotelowe korytarze, znajdź klucz, odblokuj salę balową i schwytaj cztery duchy.</p><button id="start" disabled>ŁADOWANIE…</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
@@ -79,7 +95,8 @@ const rooms=[
 {n:'Sala balowa',x:1,z:-21,w:12,d:12,color:0x3e2d49}];
 rooms.forEach((r,i)=>{block(r.x,-.23,r.z,r.w,.42,r.d,new THREE.MeshStandardMaterial({color:r.color,roughness:.91}));let trim=mats.rim;block(r.x,-.015,r.z-r.d/2,r.w,.08,.15,trim);block(r.x,-.015,r.z+r.d/2,r.w,.08,.15,trim);});
 const walls=[];
-function wx(a,b,z){if(b<=a)return;block((a+b)/2,1.25,z,b-a,2.5,.3,mats.wall);walls.push({x:(a+b)/2,z,w:b-a,d:.3});}
+// Cutaway fronts keep the gameplay visible, like a haunted hotel dollhouse.
+function wx(a,b,z){if(b<=a)return;block((a+b)/2,.40,z,b-a,.8,.3,mats.wall);walls.push({x:(a+b)/2,z,w:b-a,d:.3});}
 function wz(a,b,x){if(b<=a)return;block(x,1.25,(a+b)/2,.3,2.5,b-a,mats.wall);walls.push({x,z:(a+b)/2,w:.3,d:b-a});}
 wx(-6,-1.6,-5);wx(1.6,6,-5);wx(-6,6,5);wz(-5,5,-6);wz(-5,5,6);
 wx(-5,-1.6,-5);wx(1.6,5,-5);wx(-5,5,-15);wz(-15,-11.6,-5);wz(-8.4,-5,-5);wz(-15,-5,5);
@@ -301,35 +318,40 @@ function hotelCamera(dt){
   zoneUntil=performance.now()+2600;
  }
  if(performance.now()>zoneUntil)zoneTag.classList.remove('visible');
- const blend=.34;
+ // Fixed, slightly elevated front angle; smoothly follow the current room.
+ const blend=.60;
  const tx=hero.position.x*(1-blend)+r.x*blend;
- const tz=hero.position.z*.52+r.z*.48;
- cameraFocus.lerp(new THREE.Vector3(tx,.65,tz),1-Math.exp(-4.5*dt));
+ const tz=hero.position.z*.42+r.z*.58;
+ cameraFocus.set(
+  cameraFocus.x+(tx-cameraFocus.x)*(1-Math.exp(-4.0*dt)),
+  .87,
+  cameraFocus.z+(tz-cameraFocus.z)*(1-Math.exp(-4.0*dt))
+ );
  const portrait=window.innerHeight>window.innerWidth;
- const offset=new THREE.Vector3(portrait?3.7:5.2,portrait?14.2:12.7,portrait?20:17.7);
+ const offset=new THREE.Vector3(portrait?1.2:1.75,portrait?10.5:9.3,portrait?22.5:20.5);
  const wanted=cameraFocus.clone().add(offset);
- cameraPosition.lerp(wanted,1-Math.exp(-3.2*dt));
+ cameraPosition.lerp(wanted,1-Math.exp(-3.5*dt));
  camera.position.copy(cameraPosition);camera.lookAt(cameraFocus);
  // Zoom breathes slightly between rooms, without a jump cut.
- const targetZoom=(i===4?.96:1)*(portrait?.93:1);
+ const targetZoom=(r.d>10?.93:1)*(portrait?.94:1);
  camera.zoom+=(targetZoom-camera.zoom)*(1-Math.exp(-3.6*dt));
  camera.updateProjectionMatrix();
  // Camera-facing wall hides when it would obstruct the character.
  for(const wall of decorativeFrontWalls){
   const dx=wall.position.x-hero.position.x,dz=wall.position.z-hero.position.z;
   const close=Math.hypot(dx,dz)<5.5;
-  const desired=close?.12:.48;
+  const desired=close?.05:.20;
   wall.material.opacity+=(desired-wall.material.opacity)*(1-Math.exp(-5*dt));
  }
 }
-cameraFocus.set(0,.65,0);
-cameraPosition.set(5.2,12.7,17.7);
+cameraFocus.set(0,.8,0);
+cameraPosition.set(1.75,9.3,20.5);
 camera.position.copy(cameraPosition);camera.lookAt(cameraFocus);
 // Short wall facades in the foreground, translucent so gameplay remains readable.
 const decorativeFrontWalls=[];
 for(let r of rooms){
  const mat= new THREE.MeshStandardMaterial({color:0x5a374c,roughness:.82,transparent:true,opacity:.48,depthWrite:false});
- const wall=block(r.x,1.0,r.z+r.d/2-.05,r.w-.55,1.9,.18,mat);
+ const wall=block(r.x,.41,r.z+r.d/2-.05,r.w-.55,.82,.18,mat);
  decorativeFrontWalls.push(wall);
 }
 
