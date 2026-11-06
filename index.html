@@ -46,6 +46,13 @@
 #previewStart{display:block;margin-top:12px;border:1px solid #d4b5ec88;border-radius:16px;background:#49336c;color:#fff;font-size:15px;font-weight:800;padding:11px 22px}
 #modelStageUi{display:none;position:fixed;inset:0;z-index:11;pointer-events:none;text-align:center}
 #modelStageUi.open{display:block}
+#hotelStageUi{display:none;position:fixed;z-index:12;inset:0;pointer-events:none;text-align:center}
+#hotelStageUi.open{display:block}
+#hotelStageUi h2{position:absolute;top:max(13px,env(safe-area-inset-top));left:0;right:0;margin:0;text-shadow:0 3px 12px #000;font:700 clamp(18px,3.7vw,29px) Georgia,serif;color:#ffda9d}
+#hotelStageUi p{position:absolute;top:calc(max(13px,env(safe-area-inset-top)) + 36px);left:0;right:0;margin:0;font-size:12px;color:#e4d4fb;text-shadow:0 2px 5px #000}
+#hotelStageUi .hotelStageButtons{position:absolute;left:10px;right:10px;bottom:max(12px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;justify-content:center;pointer-events:auto;flex-wrap:wrap}
+#hotelPreviewStart{display:block;margin-top:8px;border:1px solid #eac58d;background:#69445c;color:#fff;font-size:15px;font-weight:800;padding:11px 20px;border-radius:16px}
+@media(max-height:510px) and (orientation:landscape){#hotelPreviewStart{margin-top:5px;padding:7px 15px;font-size:13px}}
 #modelStageUi .modelTitle{position:absolute;top:max(22px,env(safe-area-inset-top));left:0;right:0;font:700 clamp(20px,4vw,30px) Georgia,serif;color:#fbeaca;text-shadow:0 2px 12px #000}
 #modelStageUi .modelButtons{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:10px;right:10px;display:flex;justify-content:center;gap:8px;pointer-events:auto;flex-wrap:wrap}
 .modelButton{border:1px solid #e0c79e;border-radius:13px;background:#513869f0;color:white;padding:13px 17px;font-size:14px;font-weight:800}
@@ -101,7 +108,16 @@
 <div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
 <div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj 14 pięter nawiedzonego PHANTOM HOTEL! Każde ma własne pokoje, dekoracje i tajemnice. Wsiądź do windy w lobby.</p><button id="start" disabled>ŁADOWANIE…</button>
-<button id="previewStart" disabled>👤 ZOBACZ MODEL LUIGIEGO — ETAP 1</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<button id="previewStart" disabled>👤 ZOBACZ MODEL LUIGIEGO — ETAP 1</button>
+<button id="hotelPreviewStart" disabled>🏨 ZOBACZ CAŁY HOTEL 3D — 14 PIĘTER</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
+<div id="hotelStageUi"><h2>🏨 PHANTOM HOTEL — 14 PIĘTER</h2>
+<p>Oryginalny hotel 3D • obróć budynek i obejrzyj fasadę</p>
+<div class="hotelStageButtons">
+<button class="modelButton" id="hotelTurnLeft">↶ OBRÓĆ</button>
+<button class="modelButton" id="hotelTurnRight">OBRÓĆ ↷</button>
+<button class="modelButton main" id="hotelEnter">🎮 WEJDŹ DO HOTELU</button>
+<button class="modelButton" id="hotelBack">← MENU</button></div>
+</div>
 <div id="modelStageUi">
  <div class="modelTitle">👤 LUIGI — MODEL 3D • ETAP 1</div>
  <div class="modelButtons">
@@ -1607,14 +1623,202 @@ document.getElementById('modelBack').addEventListener('click',closeModelPreview)
 document.getElementById('modelTurnLeft').addEventListener('click',()=>{modelOrbit-=Math.PI/4;});
 document.getElementById('modelTurnRight').addEventListener('click',()=>{modelOrbit+=Math.PI/4;});
 
+// ─────────────────────────────────────────────────────────────────────────
+// EXTERIOR 3D HOTEL: 14-story art deco haunted building, interactive preview.
+// Instanced windows keep the facade inexpensive on iPhone GPU.
+// ─────────────────────────────────────────────────────────────────────────
+const hotelPreviewButton=document.getElementById('hotelPreviewStart');
+const hotelStageUi=document.getElementById('hotelStageUi');
+let hotelPreview=false,hotelExterior=null,hotelExteriorAngle=0;
+const hotelExteriorX=310;
+let savedHotelFog=null;
+function createHotelExterior(){
+ if(hotelExterior)return;
+ const model=new THREE.Group();
+ model.position.set(hotelExteriorX,0,0);
+ model.visible=false;scene.add(model);hotelExterior=model;
+ const wall=themedMat(0x5b435f),brick=themedMat(0x40334f);
+ const gold=themedMat(0xb9935f),cream=themedMat(0xe1c9aa);
+ const darkGlass=new THREE.MeshStandardMaterial({color:0x30516d,metalness:.4,roughness:.19,emissive:0x152c57,emissiveIntensity:.37});
+ const lightGlass=new THREE.MeshBasicMaterial({color:0xfce3ad});
+ const blueGlass=new THREE.MeshBasicMaterial({color:0x7dcefa});
+ const front=4.75,stories=14,story=3.12,hotelHeight=stories*story;
+ block(0,hotelHeight*.5,0,18,hotelHeight,9,wall,model);
+ block(0,.32,0,22,.64,11,gold,model);
+ block(0,.73,0,19,.22,9.65,brick,model);
+ // Repeated art-deco horizontal gilded lintels.
+ for(let i=0;i<stories;i++){
+  const y=story*(i+1);
+  block(0,y,front,19.3,.12,.52,gold,model);
+  block(0,y-.27,front+.15,18.9,.06,.24,cream,model);
+  for(const side of [-1,1]){
+   block(side*9.2,y-1.54,front-.35,.45,story-.1,.58,brick,model);
+   block(side*9.3,y-.17,front+.03,.52,.20,.82,gold,model);
+  }
+ }
+ // Two corner turrets and gold fluted trims along the facade.
+ for(const side of [-1,1]){
+  block(side*8.55,hotelHeight*.5,front-.26,.94,hotelHeight,.75,brick,model);
+  block(side*8.55,hotelHeight*.5,front+.18,.15,hotelHeight,.12,gold,model);
+  for(let i=0;i<stories;i++){
+   const y=1.74+i*story;
+   block(side*8.55,y,front+.27,1.15,.12,.12,gold,model);
+  }
+ }
+ // Window frames and panes: 14 x 7 windows, combined with instancing.
+ const windowCount=13*7;
+ const frames=new THREE.InstancedMesh(boxgeo,gold,windowCount);
+ const glass=new THREE.InstancedMesh(boxgeo,darkGlass,windowCount);
+ const strips=new THREE.InstancedMesh(boxgeo,cream,windowCount);
+ const warm=new THREE.InstancedMesh(boxgeo,lightGlass,windowCount);
+ const cool=new THREE.InstancedMesh(boxgeo,blueGlass,windowCount);
+ const dummy=new THREE.Object3D();
+ let k=0;
+ for(let floor=1;floor<stories;floor++){
+  for(let col=0;col<7;col++){
+   const x=-6.75+col*2.25,y=floor*story+1.55;
+   dummy.position.set(x,y,front+.05);
+   dummy.scale.set(1.31,1.94,.16);dummy.updateMatrix();frames.setMatrixAt(k,dummy.matrix);
+   dummy.position.z=front+.16;dummy.scale.set(1.11,1.73,.07);
+   dummy.updateMatrix();glass.setMatrixAt(k,dummy.matrix);
+   dummy.position.z=front+.205;dummy.scale.set(.060,1.69,.05);
+   dummy.updateMatrix();strips.setMatrixAt(k,dummy.matrix);
+   dummy.position.z=front+.207;dummy.scale.set(.44,.64,.05);
+   dummy.position.x=x-.24;dummy.position.y=y+.31;
+   dummy.updateMatrix();
+   if((floor*7+col)%4===0){warm.setMatrixAt(k,dummy.matrix);
+    dummy.scale.set(0,0,0);dummy.updateMatrix();cool.setMatrixAt(k,dummy.matrix);}
+   else if((floor*7+col)%3===0){cool.setMatrixAt(k,dummy.matrix);
+    dummy.scale.set(0,0,0);dummy.updateMatrix();warm.setMatrixAt(k,dummy.matrix);}
+   else {dummy.scale.set(0,0,0);dummy.updateMatrix();warm.setMatrixAt(k,dummy.matrix);cool.setMatrixAt(k,dummy.matrix);}
+   k++;
+  }
+ }
+ for(const mesh of [frames,glass,strips,warm,cool]){
+  mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;model.add(mesh);
+ }
+ // Grand entrance, central lobby windows and double doors.
+ block(0,2.0,front+.12,7.4,3.50,.43,brick,model);
+ block(0,1.87,front+.36,5.4,3.52,.22,gold,model);
+ block(0,1.95,front+.52,4.75,3.20,.17,darkGlass,model);
+ for(const side of [-1,1]){
+  block(side*1.22,1.48,front+.68,2.25,2.85,.08,brick,model);
+  block(side*1.22,1.45,front+.77,1.98,2.65,.085,darkGlass,model);
+  block(side*.33,1.53,front+.86,.065,.24,.08,gold,model);
+ }
+ block(0,3.68,front+.37,8.0,.30,1.0,gold,model);
+ for(const side of [-1,1]){
+  const gx=side*3.98;
+  block(gx,1.89,front+.55,.43,3.85,.43,cream,model);
+  block(gx,3.95,front+.57,.70,.24,.7,gold,model);
+  block(gx,.37,front+.57,.70,.40,.7,gold,model);
+ }
+ block(0,.11,front+2.2,3.9,.14,4.1,themedMat(0x7b344b),model);
+ for(const side of [-1,1])block(side*1.98,.16,front+2.2,.12,.11,4.15,gold,model);
+ // Roof, clock tower, two spires, mysterious ghostly glow.
+ block(0,hotelHeight+.55,0,19.6,1.1,10.4,brick,model);
+ block(0,hotelHeight+1.12,0,19.8,.22,10.7,gold,model);
+ block(0,hotelHeight+2.05,0,11,1.85,6.3,wall,model);
+ block(0,hotelHeight+3.14,0,12,.32,6.8,gold,model);
+ const roof=new THREE.Mesh(new THREE.ConeGeometry(5.0,2.3,4),brick);
+ roof.position.set(0,hotelHeight+4.5,0);roof.rotation.y=Math.PI/4;model.add(roof);
+ for(const side of [-1,1]){
+  const x=side*7.8;
+  const turret=new THREE.Mesh(new THREE.CylinderGeometry(.95,1.1,2.4,12),brick);
+  turret.position.set(x,hotelHeight+2.45,0);model.add(turret);
+  const cap=new THREE.Mesh(new THREE.ConeGeometry(1.3,2.2,10),gold);
+  cap.position.set(x,hotelHeight+4.75,0);model.add(cap);
+  const spark=new THREE.Mesh(new THREE.SphereGeometry(.27,12,8),
+    new THREE.MeshBasicMaterial({color:0xc7a5fa}));
+  spark.position.set(x,hotelHeight+5.9,0);model.add(spark);
+ }
+ // Ghost hotel sign with readable original title and gilded border.
+ const sign=document.createElement('canvas');sign.width=1024;sign.height=192;
+ const ctx=sign.getContext('2d');
+ ctx.fillStyle='#251b38';ctx.fillRect(0,0,1024,192);
+ ctx.strokeStyle='#e4b67b';ctx.lineWidth=14;ctx.strokeRect(10,10,1004,172);
+ ctx.fillStyle='#fff0c9';ctx.textAlign='center';
+ ctx.shadowColor='#b88dff';ctx.shadowBlur=10;
+ ctx.font='bold 79px Georgia';ctx.fillText('PHANTOM HOTEL',512,119);
+ const signTex=new THREE.CanvasTexture(sign);signTex.colorSpace=THREE.SRGBColorSpace;
+ const signMesh=new THREE.Mesh(new THREE.PlaneGeometry(13.2,2.47),
+  new THREE.MeshBasicMaterial({map:signTex,side:THREE.DoubleSide}));
+ signMesh.position.set(0,hotelHeight+2.2,3.42);model.add(signMesh);
+ // Landscape, fountain, vintage lanterns near the front gate.
+ block(0,-.05,7,25,.16,12,themedMat(0x242434),model);
+ block(0,.02,9,3.2,.10,7,themedMat(0x695269),model);
+ for(const side of [-1,1]){
+  for(let i=0;i<5;i++){
+   const px=side*(6.8+i%2*.7),pz=7.8+i*2.2;
+   const pot=new THREE.Mesh(new THREE.CylinderGeometry(.36,.26,.65,10),themedMat(0x7b6478));
+   pot.position.set(px,.36,pz);model.add(pot);
+   const shrub=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,1),themedMat(0x315d48));
+   shrub.position.set(px,.96,pz);model.add(shrub);
+  }
+  block(side*3.7,1.14,9.1,.16,2.2,.15,gold,model);
+  hotelFixture(model,side*3.7,2.45,9.1,
+   new THREE.MeshBasicMaterial({color:0xffd4a3}),.28);
+ }
+ const pool=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.25,.28,22),gold);
+ pool.position.set(0,.20,10.7);model.add(pool);
+ const water=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,.04,22),
+  new THREE.MeshStandardMaterial({color:0x6fc5d5,transparent:true,opacity:.68,roughness:.18}));
+ water.position.set(0,.37,10.7);model.add(water);
+ const jet=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,1.3,9),
+   new THREE.MeshBasicMaterial({color:0x9ce5f5,transparent:true,opacity:.55}));
+ jet.position.set(0,1.0,10.7);model.add(jet);
+ model.userData.hotelHeight=hotelHeight;
+}
+function openHotelPreview(){
+ createHotelExterior();
+ hotelExterior.visible=true;hotelPreview=true;hotelExteriorAngle=0;
+ modelPreview=false;modelStageUi.classList.remove('open');
+ center.style.display='none';hotelStageUi.classList.add('open');
+ for(const id of ['hud','mobile','floorBadge','fullscreen','sound']){
+  const el=document.getElementById(id);if(el)el.style.display='none';
+ }
+ zoneTag.style.display='none';
+ savedHotelFog=scene.fog;scene.fog=null;
+ input.vac=false;vacuumAudio(false,0);
+}
+function closeHotelPreview(startPlaying=false){
+ hotelPreview=false;hotelExterior.visible=false;hotelStageUi.classList.remove('open');
+ scene.fog=savedHotelFog;
+ for(const id of ['hud','mobile','floorBadge','fullscreen','sound']){
+  const el=document.getElementById(id);if(el)el.style.display='';
+ }
+ zoneTag.style.display='';
+ cameraRoomIndex=-1;
+ cameraFocus.set(hero.position.x,1.1,hero.position.z);
+ cameraPosition.set(hero.position.x,6.7,hero.position.z+16.5);
+ if(startPlaying){
+  initVacuumAudio();audioContext?.resume().catch(()=>{});
+  playing=true;center.style.display='none';
+  say('🏨 Witaj w PHANTOM HOTEL! Odwiedź wszystkie 14 pięter.',3);
+  updateHud();
+ }else if(!playing)center.style.display='flex';
+}
+hotelPreviewButton.addEventListener('click',openHotelPreview);
+document.getElementById('hotelTurnLeft').addEventListener('click',()=>hotelExteriorAngle-=Math.PI/4);
+document.getElementById('hotelTurnRight').addEventListener('click',()=>hotelExteriorAngle+=Math.PI/4);
+document.getElementById('hotelBack').addEventListener('click',()=>closeHotelPreview());
+document.getElementById('hotelEnter').addEventListener('click',()=>closeHotelPreview(true));
+function updateHotelPreview(dt){
+ const k=1-Math.exp(-4*dt);
+ hotelExterior.rotation.y+=(hotelExteriorAngle-hotelExterior.rotation.y)*k;
+ camera.position.set(hotelExteriorX+12,27.2,89);
+ camera.lookAt(hotelExteriorX,22.5,0);
+}
+
 start.disabled=false;start.textContent='▶ ZAGRAJ';
+hotelPreviewButton.disabled=false;
 modelPreviewButton.disabled=false;
 start.addEventListener('click',()=>{initVacuumAudio();audioContext?.resume().catch(()=>{});playing=true;center.style.display='none';say('Witamy w hotelu! Znajdź windę po lewej stronie lobby. Odwiedź trzy piętra.',4);updateHud();});
 updateHud();
 let clock=new THREE.Clock(),aim=new THREE.Vector3(0,0,-1),lastTime=performance.now(),previousLiftHint=false;
 let heroMotion=0;
 function loop(){requestAnimationFrame(loop);let dt=Math.min(clock.getDelta(),.04),t=performance.now()/1000;
-if(playing&&!complete&&!floorPicker.classList.contains('open')&&!modelPreview){
+if(playing&&!complete&&!floorPicker.classList.contains('open')&&!modelPreview&&!hotelPreview){
 // Screen-relative controls follow the fixed, cinematic hotel camera.
 let sx=(input.right?1:0)-(input.left?1:0)+joy.x,sy=(input.down?1:0)-(input.up?1:0)+joy.z;
 let vx=sx,vz=sy;
@@ -1640,10 +1844,11 @@ if(!!nearbyElevator()!==previousLiftHint){
 }
 keyGroup.position.y=Math.sin(t*2)*.18;keyGroup.rotation.y=t*1.7;
 }
-if(!modelPreview)animateHero(dt,t,heroMotion,playing&&input.vac);
+if(!modelPreview&&!hotelPreview)animateHero(dt,t,heroMotion,playing&&input.vac);
 flashlight.target.position.copy(aim).multiplyScalar(6).add(new THREE.Vector3(0,1,0));
 beam.visible=playing&&(flashOn||input.vac);if(beam.visible){let beamDir=aim.clone().normalize();beam.position.set(hero.position.x+beamDir.x*2.4,1.25,hero.position.z+beamDir.z*2.4);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(beamDir.x,0,beamDir.z));beam.material.color.setHex(input.vac?0x9ee5f6:0xfff5bc);beam.material.opacity=input.vac?.15:.08;}
-if(modelPreview){
+if(hotelPreview)updateHotelPreview(dt);
+else if(modelPreview){
  hero.rotation.y+=(modelOrbit-hero.rotation.y)*(1-Math.exp(-9*dt));
  animateHero(dt,t,0,false);
  camera.position.set(151+Math.sin(t*.18)*.12,2.95,7.25);
