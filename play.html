@@ -91,12 +91,35 @@
 @media(hover:hover) and (pointer:fine){#mobile{display:none}}@media(max-height:440px){#stick{width:108px;height:108px}#nub{left:27px;top:27px}.actions{grid-template-columns:62px 62px;grid-template-rows:50px 50px}#fullscreen{display:none}}
 #zoneTag{position:fixed;top:calc(max(10px,env(safe-area-inset-top)) + 170px);left:50%;transform:translateX(-50%) translateY(-8px);z-index:4;pointer-events:none;color:#ffdeb0;text-shadow:0 2px 9px #000,0 0 19px #9c5b98;font-family:Georgia,serif;letter-spacing:.12em;font-size:clamp(12px,2.5vw,19px);font-weight:bold;white-space:nowrap;opacity:0;transition:opacity .5s,transform .5s}
 #zoneTag.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Final landscape overrides: iPhone safe areas and short-height Safari viewport. */
+@media(orientation:landscape) and (max-height:510px){
+ #center{padding:6px 14px;justify-content:center;overflow-y:auto}
+ #center h1{font-size:clamp(25px,7vh,37px);margin:3px 0}
+ #center p{font-size:11px;line-height:1.17;max-width:84vw;margin:4px 0}
+ #center small{display:none}
+ #start,#previewStart,#hotelPreviewStart{margin-top:4px;padding:6px 13px;font-size:12px;line-height:1.1}
+ #stick{width:94px;height:94px;left:max(13px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom))}
+ #nub{width:42px;height:42px;left:26px;top:26px}
+ .actions{right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));grid-template-columns:60px 68px;grid-template-rows:42px 42px;gap:6px}
+ .control{border-radius:12px;font-size:9px}.control .emoji{font-size:17px}
+ .control.primary{font-size:10px}
+ #hud{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}
+ .panel{padding:5px 8px}.brand{font-size:10px}.objective{font-size:10px;max-width:55vw}
+ #floorBadge{left:max(12px,env(safe-area-inset-left));top:calc(max(10px,env(safe-area-inset-top)) + 57px);font-size:10px}
+ #sound,#fullscreen{top:calc(max(10px,env(safe-area-inset-top)) + 56px)}
+ #capturePanel{top:calc(max(10px,env(safe-area-inset-top)) + 52px);width:min(230px,42vw);padding:5px 7px}
+ #zoneTag{top:calc(max(10px,env(safe-area-inset-top)) + 104px)}
+ #hotelStageUi h2{font-size:20px}
+ #hotelStageUi p{font-size:10px;top:calc(max(13px,env(safe-area-inset-top)) + 25px)}
+ .hotelStageButtons .modelButton{padding:7px 10px;font-size:11px}
+ .floorCard h2{font-size:19px}.floorCard p{font-size:11px}
+}
 </style>
 </head>
 <body>
 <div id="game"></div>
 <div id="orientationNotice"><div class="rotateCard"><span class="rotatePhone">📱</span><h2>Obróć telefon poziomo</h2><p>PHANTOM HOTEL jest przygotowany do gry w poziomie. Jeśli ekran się nie obraca, wyłącz blokadę orientacji w Centrum sterowania.</p><button id="orientationOverride">Graj mimo to pionowo</button></div></div>
-<div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego hotelu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
+<div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego hotelu</div></div><div class="panel stats" id="stats">👻 0/8<br>🗝️ 0</div></div>
 <button id="fullscreen" aria-label="Pełny ekran">⛶</button><button id="sound" aria-label="Przełącz dźwięk">🔊</button>
 <div id="toast"></div><div id="floorBadge">🏨 PARTER</div>
 <div id="floorPicker" role="dialog" aria-modal="true" aria-label="Winda hotelowa">
@@ -139,6 +162,7 @@ const scene=new THREE.Scene();scene.background=new THREE.Color(0x110d20);scene.f
 // Filmowa kamera z delikatna perspektywa: stale patrzy na pokoj od frontu.
 const camera=new THREE.PerspectiveCamera(36,window.innerWidth/window.innerHeight,.1,150);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setClearColor(0x110d20,1);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.45));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;
 document.getElementById('game').appendChild(renderer.domElement);
 function resize(){
