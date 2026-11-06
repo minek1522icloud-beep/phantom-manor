@@ -11,10 +11,16 @@
 .stats{font-size:12px;white-space:nowrap;line-height:1.65;text-align:right}
 #floorPicker{display:none;position:fixed;z-index:16;inset:0;background:#0c091bdc;align-items:center;justify-content:center;padding:16px}
 #floorPicker.open{display:flex}
-.floorCard{width:min(390px,92vw);padding:22px;border:2px solid #e8c88a77;border-radius:20px;background:linear-gradient(150deg,#32243f,#150f27);box-shadow:0 14px 55px #000a;text-align:center}
+.floorCard{width:min(640px,94vw);max-height:88dvh;overflow:auto;-webkit-overflow-scrolling:touch;padding:20px;border:2px solid #e8c88a77;border-radius:20px;background:linear-gradient(150deg,#32243f,#150f27);box-shadow:0 14px 55px #000a;text-align:center}
 .floorCard h2{font:700 27px Georgia,serif;color:#ffdfb1;margin:0 0 8px}
 .floorCard p{font-size:13px;line-height:1.5;color:#d8cfe0}
-.floorBtn{width:100%;margin:6px 0;padding:13px 10px;border:1px solid #e7c28d88;border-radius:12px;background:#62406b;color:#fff;font-weight:800;font-size:15px}
+.floorBtn{display:flex;align-items:center;gap:9px;min-width:0;margin:0;padding:10px;border:1px solid #e7c28d88;border-radius:12px;background:#62406b;color:#fff;font-weight:800;font-size:12px;text-align:left;min-height:53px}
+#floorChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.floorNumber{flex:none;border:1px solid #ffffff66;border-radius:9px;min-width:27px;padding:5px 3px;text-align:center;background:#241532}
+.floorTheme{flex:1;min-width:0;line-height:1.15}
+.floorStatus{color:#e7bd83;font-size:9px;white-space:nowrap}
+@media(min-width:700px) and (orientation:landscape){#floorChoices{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-height:500px){.floorCard{max-height:94dvh;padding:12px}.floorCard h2{font-size:22px;margin:0}.floorCard p{font-size:11px;margin:4px 0 9px}.floorBtn{min-height:40px;padding:5px 7px;font-size:11px}.floorClose{margin-top:7px;padding:6px 12px}}
 .floorBtn.current{background:#885e47}
 .floorClose{margin-top:14px;border:1px solid #a899af;border-radius:12px;background:transparent;color:#fff;padding:9px 20px;font-weight:700}
 #floorBadge{position:fixed;z-index:3;top:calc(max(10px,env(safe-area-inset-top)) + 91px);left:12px;background:#261a39d9;border:1px solid #c4a76a77;border-radius:12px;padding:7px 12px;font-size:12px;font-weight:800;color:#f2d6a1;pointer-events:none}
@@ -44,6 +50,33 @@
 #modelStageUi .modelButtons{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:10px;right:10px;display:flex;justify-content:center;gap:8px;pointer-events:auto;flex-wrap:wrap}
 .modelButton{border:1px solid #e0c79e;border-radius:13px;background:#513869f0;color:white;padding:13px 17px;font-size:14px;font-weight:800}
 .modelButton.main{background:#7d4d86}
+#orientationNotice{position:fixed;inset:0;z-index:42;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;background:radial-gradient(circle at 55% 35%,#423052,#100d1e 75%)}
+#orientationNotice .rotateCard{max-width:340px;border:1px solid #d5b78388;background:#221735ec;padding:25px;border-radius:22px;box-shadow:0 20px 50px #0009}
+#orientationNotice .rotatePhone{font-size:65px;display:block;margin:0 auto 12px;animation:phoneTurn 2.5s ease-in-out infinite}
+#orientationNotice h2{font-family:Georgia,serif;color:#ffe0ad;margin:0 0 10px}
+#orientationNotice p{font-size:14px;line-height:1.5;color:#e2d6ec}
+#orientationOverride{border:1px solid #d2ade6;background:#63467c;color:white;padding:10px 17px;border-radius:13px;font-weight:800}
+@keyframes phoneTurn{0%,15%,100%{transform:rotate(0)}40%,70%{transform:rotate(90deg)}}
+@media(orientation:portrait) and (pointer:coarse){body:not(.portraitAllowed) #orientationNotice{display:flex}}
+@media(max-height:510px) and (orientation:landscape){
+ #center{padding:10px;gap:0}
+ #center>div:first-child{display:none}
+ #center h1{font-size:clamp(26px,7vh,38px);margin:4px 0}
+ #center p{font-size:12px;line-height:1.25;max-width:76vw;margin:5px 0}
+ #center small{display:none}
+ #start,#previewStart{margin-top:6px;padding:7px 15px;font-size:13px}
+ #stick{bottom:max(7px,env(safe-area-inset-bottom));left:calc(max(11px,env(safe-area-inset-left)));width:98px;height:98px}
+ #nub{left:26px;top:26px;width:46px;height:46px}
+ .actions{right:max(11px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));grid-template-columns:65px 75px;grid-template-rows:45px 45px;gap:7px}
+ .control{border-radius:13px;font-size:10px}.control .emoji{font-size:17px;margin-bottom:0}
+ .control.primary{font-size:11px}
+ #hud{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right))}
+ .panel{padding:6px 9px}.brand{font-size:10px}.objective{font-size:10px}
+ #floorBadge{left:12px;top:calc(max(10px,env(safe-area-inset-top)) + 65px);font-size:10px}
+ #sound,#fullscreen{top:calc(max(10px,env(safe-area-inset-top)) + 64px);font-size:11px}
+ #capturePanel{top:calc(max(10px,env(safe-area-inset-top)) + 60px);width:min(230px,42vw);padding:6px 8px}
+ #zoneTag{top:calc(max(10px,env(safe-area-inset-top)) + 118px)}
+}
 #start{background:linear-gradient(115deg,#8455d1,#bf78ed);color:#fff;border:0;padding:15px 33px;border-radius:18px;font-size:18px;font-weight:900;box-shadow:0 10px 35px #7032e680;margin-top:14px}
 #center small{margin-top:20px;color:#bfb2d7;font-size:12px;max-width:430px}
 #errors{position:fixed;z-index:20;bottom:12px;left:8px;right:8px;text-align:center;color:#ffcdc4;font-size:13px;pointer-events:none}
@@ -55,18 +88,19 @@
 </head>
 <body>
 <div id="game"></div>
+<div id="orientationNotice"><div class="rotateCard"><span class="rotatePhone">📱</span><h2>Obróć telefon poziomo</h2><p>PHANTOM HOTEL jest przygotowany do gry w poziomie. Jeśli ekran się nie obraca, wyłącz blokadę orientacji w Centrum sterowania.</p><button id="orientationOverride">Graj mimo to pionowo</button></div></div>
 <div id="hud"><div class="panel"><div class="brand">👻 PHANTOM MANOR</div><div class="objective" id="objective">Wejdź do nawiedzonego hotelu</div></div><div class="panel stats" id="stats">👻 0/4<br>🗝️ 0</div></div>
 <button id="fullscreen" aria-label="Pełny ekran">⛶</button><button id="sound" aria-label="Przełącz dźwięk">🔊</button>
 <div id="toast"></div><div id="floorBadge">🏨 PARTER</div>
 <div id="floorPicker" role="dialog" aria-modal="true" aria-label="Winda hotelowa">
  <div class="floorCard"><h2>🛗 Hotelowa winda</h2>
- <p>Wybierz piętro PHANTOM HOTEL. Każdy poziom kryje nowe pokoje i duchy.</p>
+ <p>14 pięter pełnych tajemnic. Każde ma własny styl i pomieszczenia.</p>
  <div id="floorChoices"></div>
  <button class="floorClose" id="closeFloor">Zamknij</button></div>
 </div>
 <div id="capturePanel" aria-live="off"><span id="captureName">🌀 Wsysanie ducha</span><div id="captureTrack"><div id="captureFill"></div></div><span id="captureHint">Przytrzymaj ŁAP DUCHA, aż duch zostanie wciągnięty</span></div>
 <div id="mobile"><div id="stick" aria-label="Joystick ruchu"><div id="nub"></div></div><div class="actions"><button class="control" id="light"><span class="emoji">🔦</span>LATARKA</button><button class="control primary" id="vacuum"><span class="emoji">🌀</span>ŁAP DUCHA</button><button class="control" id="action"><span class="emoji">🗝️</span>DZIAŁAJ</button></div></div>
-<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj trzy piętra nawiedzonego hotelu! Wsiądź do windy w lobby, eksploruj apartamenty i korytarze, a potem schwytaj osiem duchów.</p><button id="start" disabled>ŁADOWANIE…</button>
+<div id="center"><div style="font-size:72px">🏚️👻</div><h1>PHANTOM<br>MANOR</h1><p>Odkryj 14 pięter nawiedzonego PHANTOM HOTEL! Każde ma własne pokoje, dekoracje i tajemnice. Wsiądź do windy w lobby.</p><button id="start" disabled>ŁADOWANIE…</button>
 <button id="previewStart" disabled>👤 ZOBACZ MODEL LUIGIEGO — ETAP 1</button><small>📱 Telefon: joystick, latarka, przycisk łapania i DZIAŁAJ. ⌨️ Komputer: WASD, F, E, lewy przycisk myszy. To prototyp przeglądarkowy, a nie plik Unity.</small></div>
 <div id="modelStageUi">
  <div class="modelTitle">👤 LUIGI — MODEL 3D • ETAP 1</div>
@@ -80,6 +114,8 @@
 <script type="module">
 (async function(){
 const start=document.getElementById('start'), center=document.getElementById('center'), msg=document.getElementById('errors');
+document.getElementById('orientationOverride').addEventListener('click',()=>document.body.classList.add('portraitAllowed'));
+window.addEventListener('orientationchange',()=>{if(innerWidth>innerHeight)document.body.classList.remove('portraitAllowed');});
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js');}
 catch(e){start.textContent='Nie można załadować gry';msg.textContent='Sprawdź połączenie z internetem i odśwież stronę.';return;}
@@ -318,11 +354,28 @@ pictureWall(-3.35,-14.74,'101');pictureWall(3.35,-14.74,'102');
 // ─── THREE HOTEL FLOORS & INTERACTIVE ELEVATOR ───
 const originalRooms=rooms.slice(),originalWalls=walls.slice();
 originalRooms.forEach(r=>r.level=0);
-const floors=[
- {label:'Parter',shift:0,short:'PARTER'},
- {label:'Piętro 1',shift:42,short:'PIĘTRO 1'},
- {label:'Piętro 2',shift:84,short:'PIĘTRO 2'}
+const hotelFloorThemes=[
+ {name:'Królewskie lobby',icon:'🏨',color:0x8d5c72,accent:0xc99d67},
+ {name:'Apartamenty gości',icon:'🛎️',color:0x497f7c,accent:0xe2ba7d},
+ {name:'Sala księżycowa',icon:'🌙',color:0x684c96,accent:0xb3b8ee},
+ {name:'Ogród zimowy',icon:'🌿',color:0x386d5b,accent:0xa5e2a8},
+ {name:'Kuchnia i restauracja',icon:'🍽️',color:0x9e664c,accent:0xffcf88},
+ {name:'Galeria sztuki',icon:'🖼️',color:0x685486,accent:0xe5c7a5},
+ {name:'Podwodne akwarium',icon:'🐠',color:0x2a6e91,accent:0x70dcef},
+ {name:'Stara biblioteka',icon:'📚',color:0x77523b,accent:0xe9c280},
+ {name:'Teatr i opera',icon:'🎭',color:0x79364c,accent:0xf1b864},
+ {name:'Zegarowy warsztat',icon:'🕰️',color:0x6d604e,accent:0xe0c282},
+ {name:'Laboratorium',icon:'⚗️',color:0x416b83,accent:0x8ce3f6},
+ {name:'Lodowy pałac',icon:'❄️',color:0x6d95ab,accent:0xcfecfc},
+ {name:'Złoty apartament',icon:'👑',color:0x886242,accent:0xf7de93},
+ {name:'Wieża duchów',icon:'👻',color:0x51366f,accent:0xe6aeed}
 ];
+const floors=hotelFloorThemes.map((theme,level)=>({
+ label:level===0?'Parter':'Piętro '+level,
+ shift:level*42,
+ short:level===0?'PARTER':'PIĘTRO '+level,
+ theme
+}));
 const elevatorPoints=[];
 const floorBadge=document.getElementById('floorBadge');
 const floorPicker=document.getElementById('floorPicker');
@@ -330,7 +383,7 @@ const floorChoices=document.getElementById('floorChoices');
 let currentFloor=0;
 function makeElevator(level){
  const x=floors[level].shift-4.2,z=3.25;
- elevatorPoints.push({level,x,z});
+ elevatorPoints[level]={level,x,z};
  const bronze=decorMaterial(0x775373,.32,.45),elevatorDark=decorMaterial(0x31223f,.35,.55);
  block(x,1.35,z+1.32,2.06,2.7,.25,brass);
  block(x,1.31,z+1.48,1.75,2.43,.12,elevatorDark);
@@ -421,7 +474,7 @@ function openElevator(){
   const button=document.createElement('button');
   button.type='button';
   button.className='floorBtn'+(i===currentFloor?' current':'');
-  button.textContent=(i===0?'🏨 ':i===1?'🛎️ ':'🌙 ')+f.label+(i===currentFloor?' • JESTEŚ TUTAJ':'');
+  button.innerHTML='<span class="floorNumber">'+(i===0?'P':i)+'</span><span class="floorTheme">'+f.theme.icon+' '+f.theme.name+'</span><span class="floorStatus">'+(i===currentFloor?'TUTAJ':'↗')+'</span>';
   button.addEventListener('click',()=>moveToFloor(i));
   floorChoices.appendChild(button);
  });
@@ -431,6 +484,7 @@ function openElevator(){
 function moveToFloor(level){
  floorPicker.classList.remove('open');
  if(level===currentFloor)return;
+ ensureHotelFloor(level); // Generowanie nowych pomieszczen tylko przy pierwszej wizycie.
  currentFloor=level;
  const pos=elevatorPoints[level];
  hero.position.set(pos.x+1.1,0,pos.z-1.2);
@@ -442,7 +496,7 @@ function moveToFloor(level){
  cameraPosition.set(hero.position.x,6.6,hero.position.z+16.5);
  camera.position.copy(cameraPosition);
  capturePanel.classList.remove('active');
- floorBadge.textContent='🏨 '+floors[level].short;
+ floorBadge.textContent=floors[level].theme.icon+' '+floors[level].short+' · '+floors[level].theme.name;
  say('🛗 Winda: '+floors[level].label+' — odkryj nowe pokoje!',3.2);
  updateHud();
 }
@@ -1129,7 +1183,7 @@ function updateHud(){
  nearbyElevator()?'🛗 Winda — naciśnij DZIAŁAJ, by wybrać piętro':
  currentFloor===0&&!hasKey?'Znajdź złoty klucz w hotelowym zapleczu':
  currentFloor===0&&!doorOpen?'Otwórz salę balową kluczem albo odwiedź piętra':
- 'Odkrywaj hotel i złap wszystkie '+ghosts.length+' duchów';
+ 'Odkrywaj '+floors.length+' pięter hotelu i złap '+ghosts.length+' duchów';
 }
 function nearDoor(){return Math.hypot(hero.position.x+5,hero.position.z+21)<2.9;}
 function action(){if(complete)return;
