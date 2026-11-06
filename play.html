@@ -567,7 +567,7 @@ for(let r of rooms){
 // Zaokraglony, autorski low-poly bohater 3D w klimacie przygody w nawiedzonym hotelu.
 const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,2);
 const heroRig=new THREE.Group();hero.add(heroRig);
-heroRig.scale.set(.98,1.19,.95); // smuklejszy i wyzszy bohater, bez przerysowanej szerokosci
+heroRig.scale.set(.96,1.19,.94); // wysoka, smukla sylwetka bohatera
 
 const heroMats={
  shirt:new THREE.MeshStandardMaterial({color:0x18a241,roughness:.63}),
@@ -592,7 +592,8 @@ function characterMesh(geometry,material,parent,x,y,z,sx=1,sy=1,sz=1){
  const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);
  o.scale.set(sx,sy,sz);parent.add(o);return o;
 }
-const avatarSphere=new THREE.SphereGeometry(1,20,14);
+// Gladsza siatka 3D dla wszystkich zaokraglonych czesci postaci.
+const avatarSphere=new THREE.SphereGeometry(1,28,20);
 const avatarCap=new THREE.CapsuleGeometry(.24,.48,5,12);
 const avatarRound=new THREE.CapsuleGeometry(.22,.38,5,12);
 function heroBall(mat,parent,x,y,z,sx,sy,sz){return characterMesh(avatarSphere,mat,parent,x,y,z,sx,sy,sz);}
@@ -606,6 +607,15 @@ heroBall(heroMats.pants,heroBody,0,.78,.10,.355,.42,.30);
 heroBall(heroMats.pants,heroBody,0,1.03,.24,.27,.32,.076);
 heroBall(heroMats.seam,heroBody,0,1.04,.324,.15,.092,.013);
 heroBall(heroMats.pants,heroBody,0,1.050,.341,.138,.085,.018);
+// Naszywana kieszen, szwy i kolnierzyk - charakterystyczny stroj Luigiego.
+heroBall(heroMats.pants,heroBody,0,.935,.346,.16,.105,.029);
+heroBall(heroMats.seam,heroBody,0,.875,.370,.119,.014,.011);
+for(const sign of [-1,1]){
+ const stitch=heroBall(heroMats.seam,heroBody,sign*.142,.952,.364,.009,.050,.008);
+ stitch.rotation.z=-sign*.20;
+ const collar=heroBall(heroMats.darkGreen,heroBody,sign*.14,1.57,.15,.165,.060,.13);
+ collar.rotation.z=sign*.21;
+}
 // Szelki: subtelnie zaokraglone zamiast prostokatnych paskow.
 for(const side of [-1,1]){
  const strap=heroBall(heroMats.pants,heroBody,side*.19,1.22,.25,.086,.33,.062);
@@ -638,6 +648,8 @@ for(const side of [-1,1]){
 }
 // Luigi jest rozpoznawalny po wysunietym okraglym nosie.
 heroBall(heroMats.skin,heroHead,0,-.10,.495,.205,.172,.242);
+// Nos z przodu otrzymuje delikatna, jasna plame i wyrazniejszy profil.
+heroBall(heroMats.skin,heroHead,0,-.087,.664,.128,.097,.100);
 heroBall(heroMats.cheek,heroHead,-.014,-.134,.703,.063,.033,.032);
 // Duze wasy z czterech zakrzywionych fragmentow.
 for(const side of [-1,1]){
@@ -649,9 +661,13 @@ for(const side of [-1,1]){
  tip.rotation.z=side*.55;
 }
 heroBall(heroMats.hair,heroHead,0,-.383,.406,.105,.028,.027);
+// Przyjazny, zaskoczony wyraz twarzy po odslonieciu duchow.
+const heroMouth=heroBall(heroMats.hair,heroHead,0,-.392,.446,.084,.019,.020);
 // Czapka z wysokim, miekkim denkiem, daszkiem i bialym kolkiem z litera L.
 heroBall(heroMats.cap,heroHead,0,.418,-.028,.474,.249,.448);
 heroBall(heroMats.darkGreen,heroHead,0,.307,.278,.459,.062,.274);
+// Lekko wystajacy zaokraglony daszek nad oczami.
+const visorRim=heroBall(heroMats.cap,heroHead,0,.337,.335,.44,.049,.235);
 heroBall(heroMats.cap,heroHead,0,.477,-.065,.432,.158,.410);
 heroBall(heroMats.glove,heroHead,0,.444,.445,.168,.144,.038);
 // Dwustronny znaczek, czytelny na iPhonie.
@@ -679,6 +695,9 @@ for(const side of [-1,1]){
  characterMesh(avatarRound,heroMats.pants,leg,0,-.21,0,.78,.77,.79);
  heroBall(heroMats.shoe,leg,0,-.535,.135,.208,.135,.34);
  heroBall(heroMats.sole,leg,0,-.639,.148,.207,.053,.348);
+// Wyrazny nosek, jezyk buta i obcas z gladkiej siatki.
+heroBall(heroMats.shoe,leg,0,-.53,.28,.192,.102,.20);
+heroBall(heroMats.sole,leg,0,-.615,-.09,.185,.09,.13);
  heroLegs.push(leg);
 }
 // Ruchome ramiona z rekawami i duzymi rekawiczkami.
@@ -693,7 +712,10 @@ for(const side of [-1,1]){
  heroBall(heroMats.glove,arm,side*.26,-.31,.015,.163,.088,.16);
  for(let k=-1;k<=1;k++)
   heroBall(heroMats.glove,arm,side*(.20+k*.055),-.60,.075,.049,.091,.060);
- heroArms.push(arm);
+ // Zaokraglona linia mankietu, osobno od palcow.
+const cuff=heroBall(heroMats.glove,arm,side*.24,-.355,.016,.169,.079,.154);
+cuff.rotation.z=side*.18;
+heroArms.push(arm);
 }
 // Wlasny odkurzacz duchow na plecach, z paskami i niebieskim zbiornikiem energii.
 const vacuumPack=new THREE.Group();vacuumPack.position.set(0,1.12,-.42);heroBody.add(vacuumPack);
@@ -710,6 +732,18 @@ const vacuumHandle=heroCylinder(heroMats.vacuum,nozzleGroup,.066,.086,.72,.12,-.
 vacuumHandle.rotation.z=-1.08;
 const nozzleTip=heroCylinder(heroMats.brass,nozzleGroup,.095,.13,.18,.36,.06,.05);
 nozzleTip.rotation.z=-1.08;
+// Elastyczny, ciemny waz laczacy odkurzacz na plecach z reka.
+const hosePoints=[
+ new THREE.Vector3(-.20,1.29,-.68),
+ new THREE.Vector3(-.47,1.02,-.61),
+ new THREE.Vector3(-.57,.75,-.18),
+ new THREE.Vector3(-.27,.69,.22),
+ new THREE.Vector3(.16,.83,.41),
+ new THREE.Vector3(.64,1.10,.31)
+];
+const hoseGeometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hosePoints),26,.066,7,false);
+heroBody.add(new THREE.Mesh(hoseGeometry,heroMats.vacuum));
+heroBall(heroMats.vacuumGlow,nozzleGroup,.38,.12,.055,.11,.09,.10);
 // Latarka i wiazka zostaja zgodne z poprzednim systemem i sterowaniem.
 const flashlight=new THREE.SpotLight(0xd9e5ff,0,11,Math.PI/5,.6,1.2);
 flashlight.position.set(.32,1.37,.24);hero.add(flashlight);
@@ -744,6 +778,9 @@ function animateHero(dt,t,movement,isSucking){
  const blink=blinkCycle<.13?Math.max(.07,Math.abs(blinkCycle-.065)/.065):1;
  for(const eye of blinkEyes)eye.scale.y+=(blink-eye.scale.y)*smooth;
  vacuumPack.rotation.z=Math.sin(t*8)*.024*(isSucking?1:.2);
+ // Subtelny oddech na postoju, widoczny rowniez podczas ogladania modelu.
+ heroBody.scale.x+=(1+.012*Math.sin(t*2.4)-heroBody.scale.x)*smooth;
+ heroBody.scale.z+=(1+.010*Math.sin(t*2.4)-heroBody.scale.z)*smooth;
 }
 const keyGroup=new THREE.Group();scene.add(keyGroup);keyGroup.position.set(-10,0,-9.5);
 const keyMat=new THREE.MeshStandardMaterial({color:0xffd975,metalness:.7,roughness:.23,emissive:0xd18f19,emissiveIntensity:.6});
