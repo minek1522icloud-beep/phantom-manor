@@ -567,7 +567,7 @@ for(let r of rooms){
 // Zaokraglony, autorski low-poly bohater 3D w klimacie przygody w nawiedzonym hotelu.
 const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,2);
 const heroRig=new THREE.Group();hero.add(heroRig);
-heroRig.scale.set(1.10,1.13,1.10); // smukle, wysokie proporcje jak u Luigiego
+heroRig.scale.set(.98,1.19,.95); // smuklejszy i wyzszy bohater, bez przerysowanej szerokosci
 
 const heroMats={
  shirt:new THREE.MeshStandardMaterial({color:0x18a241,roughness:.63}),
@@ -601,19 +601,19 @@ function heroCylinder(mat,parent,r1,r2,len,x,y,z,segments=12){
 }
 // Sylwetka: oplywowy tulow, zaokraglone ogrodniczki i glowa.
 const heroBody=new THREE.Group();heroRig.add(heroBody);
-heroBall(heroMats.shirt,heroBody,0,1.12,0,.41,.63,.35);
-heroBall(heroMats.pants,heroBody,0,.78,.12,.43,.40,.355);
-heroBall(heroMats.pants,heroBody,0,1.03,.285,.30,.34,.088);
-heroBall(heroMats.seam,heroBody,0,1.04,.374,.17,.10,.012);
-heroBall(heroMats.pants,heroBody,0,1.050,.391,.153,.091,.017);
+heroBall(heroMats.shirt,heroBody,0,1.14,0,.335,.67,.29);
+heroBall(heroMats.pants,heroBody,0,.78,.10,.355,.42,.30);
+heroBall(heroMats.pants,heroBody,0,1.03,.24,.27,.32,.076);
+heroBall(heroMats.seam,heroBody,0,1.04,.324,.15,.092,.013);
+heroBall(heroMats.pants,heroBody,0,1.050,.341,.138,.085,.018);
 // Szelki: subtelnie zaokraglone zamiast prostokatnych paskow.
 for(const side of [-1,1]){
- const strap=heroBall(heroMats.pants,heroBody,side*.225,1.22,.29,.104,.32,.07);
+ const strap=heroBall(heroMats.pants,heroBody,side*.19,1.22,.25,.086,.33,.062);
  strap.rotation.z=-side*.13;
- heroBall(heroMats.brass,heroBody,side*.24,1.015,.355,.067,.068,.041);
+ heroBall(heroMats.brass,heroBody,side*.20,1.015,.317,.061,.061,.037);
 }
 // ETAP 1: rozpoznawalna, zaokraglona twarz Luigiego: policzki, duzy nos, wasy, uszy, czapka z L.
-const heroHead=new THREE.Group();heroHead.position.set(0,1.83,0);heroBody.add(heroHead);
+const heroHead=new THREE.Group();heroHead.position.set(0,1.88,0);heroHead.scale.set(1.05,.97,1.04);heroBody.add(heroHead);
 heroBall(heroMats.skin,heroHead,0,0,0,.428,.482,.405);
 heroBall(heroMats.cheek,heroHead,0,-.285,.124,.325,.179,.279); // podbrodek
 // Wlosy i baki, widoczne rowniez z bokow i z tylu.
@@ -675,7 +675,7 @@ luigiBadge.position.set(0,.444,.489);heroHead.add(luigiBadge);
 // Buty, nogi i obrot wokol stawu biodrowego.
 const heroLegs=[];
 for(const side of [-1,1]){
- const leg=new THREE.Group();leg.position.set(side*.205,.66,0);heroBody.add(leg);
+ const leg=new THREE.Group();leg.position.set(side*.18,.66,0);heroBody.add(leg);
  characterMesh(avatarRound,heroMats.pants,leg,0,-.21,0,.78,.77,.79);
  heroBall(heroMats.shoe,leg,0,-.535,.135,.208,.135,.34);
  heroBall(heroMats.sole,leg,0,-.639,.148,.207,.053,.348);
@@ -684,8 +684,8 @@ for(const side of [-1,1]){
 // Ruchome ramiona z rekawami i duzymi rekawiczkami.
 const heroArms=[];
 for(const side of [-1,1]){
- const arm=new THREE.Group();arm.position.set(side*.43,1.40,0);heroBody.add(arm);
- const sleeve=characterMesh(avatarCap,heroMats.shirt,arm,side*.145,-.19,0,.75,.74,.73);
+ const arm=new THREE.Group();arm.position.set(side*.38,1.40,0);heroBody.add(arm);
+ const sleeve=characterMesh(avatarCap,heroMats.shirt,arm,side*.12,-.19,0,.71,.78,.70);
  sleeve.rotation.z=side*.22;
  heroBall(heroMats.glove,arm,side*.26,-.47,.034,.175,.175,.16);
  heroBall(heroMats.glove,arm,side*.19,-.48,.16,.09,.11,.10);
