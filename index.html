@@ -381,29 +381,39 @@ const floorBadge=document.getElementById('floorBadge');
 const floorPicker=document.getElementById('floorPicker');
 const floorChoices=document.getElementById('floorChoices');
 let currentFloor=0;
-function makeElevator(level){
+function makeElevator(level,parent=scene){
  const x=floors[level].shift-4.2,z=3.25;
  elevatorPoints[level]={level,x,z};
  const bronze=decorMaterial(0x775373,.32,.45),elevatorDark=decorMaterial(0x31223f,.35,.55);
- block(x,1.35,z+1.32,2.06,2.7,.25,brass);
- block(x,1.31,z+1.48,1.75,2.43,.12,elevatorDark);
- block(x-.43,1.30,z+1.565,.79,2.32,.06,bronze);
- block(x+.43,1.30,z+1.565,.79,2.32,.06,bronze);
- block(x,1.38,z+1.61,.05,2.18,.08,brass);
- block(x-.77,1.30,z+1.63,.04,2.30,.05,brass);
- block(x+.77,1.30,z+1.63,.04,2.30,.05,brass);
- const call=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),
+ block(x,1.35,z+1.32,2.06,2.7,.25,brass,parent);
+ block(x,1.31,z+1.48,1.75,2.43,.12,elevatorDark,parent);
+ block(x-.43,1.30,z+1.565,.79,2.32,.06,bronze,parent);
+ block(x+.43,1.30,z+1.565,.79,2.32,.06,bronze,parent);
+ block(x,1.38,z+1.61,.05,2.18,.08,brass,parent);
+ block(x-.77,1.30,z+1.63,.04,2.30,.05,brass,parent);
+ block(x+.77,1.30,z+1.63,.04,2.30,.05,brass,parent);
+ // Eleganckie art deco: gzyms, wypukle pylony i podswietlany przycisk.
+ block(x,2.77,z+1.43,2.35,.22,.37,brass,parent);
+ for(const side of [-1,1]){
+  block(x+side*1.06,1.47,z+1.51,.11,2.6,.22,brass,parent);
+  sphere(x+side*.99,2.76,z+1.67,.13,new THREE.MeshBasicMaterial({color:0xffd89b}),parent);
+ }
+ const call=new THREE.Mesh(new THREE.SphereGeometry(.14,12,10),
   new THREE.MeshBasicMaterial({color:0xa8f2ff}));
- call.position.set(x+1.2,1.15,z+1.6);scene.add(call);
- let signCanvas=document.createElement('canvas');signCanvas.width=192;signCanvas.height=96;
- let ctx=signCanvas.getContext('2d');ctx.fillStyle='#24152f';ctx.fillRect(0,0,192,96);
- ctx.fillStyle='#f8d99c';ctx.textAlign='center';ctx.font='bold 28px Georgia';ctx.fillText('LIFT',96,36);
- ctx.font='bold 24px Georgia';ctx.fillText(level===0?'0':String(level),96,72);
+ call.position.set(x+1.2,1.15,z+1.6);parent.add(call);
+ const signCanvas=document.createElement('canvas');
+ signCanvas.width=192;signCanvas.height=96;
+ const ctx=signCanvas.getContext('2d');
+ ctx.fillStyle='#24152f';ctx.fillRect(0,0,192,96);
+ ctx.strokeStyle='#d7ae74';ctx.lineWidth=4;ctx.strokeRect(3,3,186,90);
+ ctx.fillStyle='#f8d99c';ctx.textAlign='center';
+ ctx.font='bold 27px Georgia';ctx.fillText('LIFT',96,36);
+ ctx.font='bold 25px Georgia';ctx.fillText(level===0?'P':String(level),96,73);
  const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.55,.77),
   new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(signCanvas),side:THREE.DoubleSide}));
- panel.position.set(x,2.93,z+1.61);scene.add(panel);
- block(x,.07,z,.98,.12,1.05,brass);
- block(x,.10,z,.62,.04,.8,teal);
+ panel.position.set(x,2.93,z+1.62);parent.add(panel);
+ block(x,.07,z,.98,.12,1.05,brass,parent);
+ block(x,.10,z,.62,.04,.8,teal,parent);
 }
 makeElevator(0);
 for(let level=1;level<3;level++){
@@ -486,6 +496,8 @@ function moveToFloor(level){
  if(level===currentFloor)return;
  ensureHotelFloor(level); // Generowanie nowych pomieszczen tylko przy pierwszej wizycie.
  currentFloor=level;
+ // Disabling distant level groups avoids drawing hundreds of decorative meshes.
+ generatedHotelFloors.forEach((group,i)=>{group.visible=i===level;});
  const pos=elevatorPoints[level];
  hero.position.set(pos.x+1.1,0,pos.z-1.2);
  vacuumTarget=null;input.vac=false;joy.x=0;joy.z=0;
@@ -616,6 +628,336 @@ for(let r of rooms){
  const wall=block(r.x,.33,r.z+r.d/2-.05,r.w-.55,.63,.18,mat);
  wall.userData.room=r;
  decorativeFrontWalls.push(wall);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 14 FLOORS: stylized hotel environments, rendered lazily for mobile Safari.
+// The ground floor and floors 1-2 remain intact from the previous build.
+// ─────────────────────────────────────────────────────────────────────────────
+const hotelRoomNames=[
+ ['Lobby','Korytarz','Zaplecze','Biblioteka','Sala balowa'],
+ ['Recepcja pietra','Apartamenty','Pokoj goscia','Salon','Apartament'],
+ ['Foyer ksiezycowe','Korytarz','Pokoj','Gabinet luster','Sala ksiezyca'],
+ ['Wejscie do ogrodow','Bluszczowy tunel','Szklarnia','Oranzeria','Palmiarnia'],
+ ['Restauracyjne foyer','Korytarz smakow','Hotelowa kuchnia','Spiżarnia','Sala bankietowa'],
+ ['Galeria glowna','Korytarz obrazow','Rzezbiarnia','Pracownia artysty','Zlota galeria'],
+ ['Foyer oceaniczne','Tunel blekitu','Akwarium','Stacja nurkow','Sala koralowcow'],
+ ['Hol ksiegozbioru','Korytarz pergaminow','Archiwum','Czytelnia','Biblioteka tajemnic'],
+ ['Teatralne foyer','Korytarz masek','Garderoba','Sala kostiumow','Scena operowa'],
+ ['Zegarowy hol','Mechaniczny korytarz','Warsztat','Pokoj mechanizmow','Wieza zegarowa'],
+ ['Hol laboratorium','Korytarz iskier','Laboratorium','Pokoj eksperymentow','Reaktor fantomow'],
+ ['Lodowe foyer','Krysztalowy korytarz','Komnata lodu','Salon sniezny','Lodowa sala'],
+ ['Krolewski hol','Zloty korytarz','Skarbiec','Salon krolewski','Apartament korony'],
+ ['Hol duchow','Korytarz obrazow','Sala zaklec','Komnata tajemnic','Wieza fantomow']
+];
+const generatedHotelFloors=new Map();
+const hotelRoomMatCache=new Map();
+function themedMat(c,emissive=false){
+ return new THREE.MeshStandardMaterial({color:c,roughness:emissive?.40:.75,
+  metalness:emissive?.18:.04,emissive:emissive?c:0x000000,emissiveIntensity:emissive?.42:0});
+}
+const hotelSharedGems=new THREE.OctahedronGeometry(1,0);
+const hotelSharedCylinder=new THREE.CylinderGeometry(1,1,1,12);
+const hotelSharedSphere=new THREE.SphereGeometry(1,12,10);
+function getWallpaper(level){
+ const c=document.createElement('canvas');c.width=256;c.height=256;
+ const ctx=c.getContext('2d');
+ const p=hotelFloorThemes[level],col=new THREE.Color(p.color);
+ ctx.fillStyle='#'+col.getHexString();ctx.fillRect(0,0,256,256);
+ ctx.strokeStyle='#f2d8a32f';ctx.lineWidth=3;
+ for(let y=0;y<256;y+=64){
+  for(let x=0;x<256;x+=64){
+   ctx.strokeRect(x+10,y+11,44,43);
+   ctx.strokeStyle='#fff3cb18';
+   ctx.strokeRect(x+14,y+15,36,35);
+   ctx.strokeStyle='#f2d8a32f';
+   ctx.beginPath();ctx.moveTo(x+32,y+19);ctx.lineTo(x+39,y+32);
+   ctx.lineTo(x+32,y+45);ctx.lineTo(x+25,y+32);ctx.closePath();ctx.stroke();
+  }
+ }
+ const tex=new THREE.CanvasTexture(c);
+ tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.repeat.set(2,1);
+ return tex;
+}
+function buildHotelRoomBackdrop(root,r,level,roomIndex,wallpaper){
+ const group=new THREE.Group();root.add(group);
+ const backZ=r.z-r.d*.5+.11;
+ const gold=mats.gold,p=hotelFloorThemes[level],trim=themedMat(p.accent);
+ // Long panels, windows, cornice and doors as a cutaway movie set.
+ const wallMaterial=new THREE.MeshStandardMaterial({map:wallpaper,side:THREE.DoubleSide,roughness:.94});
+ const addWall=(x,width)=>{
+  block(x,1.60,backZ,width,3.12,.14,wallMaterial,group);
+  block(x,2.88,backZ+.1,width,.10,.15,trim,group);
+  block(x,.36,backZ+.1,width,.17,.15,mats.wood,group);
+  for(let xx=x-width*.5+.7;xx<x+width*.5-.4;xx+=1.45){
+   block(xx,1.50,backZ+.14,.06,2.13,.09,trim,group);
+   sphere(xx,2.68,backZ+.22,.07,new THREE.MeshBasicMaterial({color:p.accent}),group);
+  }
+ };
+ if(roomIndex===0||roomIndex===2){
+  const opening=3.2,section=(r.w-opening)*.5;
+  addWall(r.x-(r.w+opening)/4,section);
+  addWall(r.x+(r.w+opening)/4,section);
+  block(r.x,2.85,backZ,opening,.36,.15,trim,group);
+ }else addWall(r.x,r.w-.38);
+ const frame=themedMat(p.accent);
+ for(let side of [-1,1]){
+  const xx=r.x+side*r.w*.29;
+  const art=block(xx,1.7,backZ+.24,.96,1.20,.08,frame,group);
+  block(xx,1.70,backZ+.29,.75,.97,.08,themedMat(p.color,true),group);
+  // Abstract moonlight paintings – not copyrighted image assets.
+  const o=new THREE.Mesh(hotelSharedSphere,new THREE.MeshBasicMaterial({color:p.accent}));
+  o.position.set(xx,1.84,backZ+.35);o.scale.set(.18,.20,.03);group.add(o);
+  block(xx,1.26,backZ+.34,.49,.035,.03,trim,group);
+ }
+ group.visible=false;
+ roomBackdrops.push({room:r,group});
+ const faceMaterial=new THREE.MeshStandardMaterial({color:p.color,transparent:true,opacity:.15,depthWrite:false});
+ const facade=block(r.x,.29,r.z+r.d/2-.05,r.w-.54,.57,.16,faceMaterial,root);
+ facade.userData.room=r;decorativeFrontWalls.push(facade);
+}
+function hotelFixture(root,x,y,z,material,size=.25){
+ const mesh=new THREE.Mesh(hotelSharedSphere,material);
+ mesh.position.set(x,y,z);mesh.scale.set(size,size,size);root.add(mesh);return mesh;
+}
+function hotelColumn(root,x,z,mat){
+ block(x,1.4,z,.35,2.8,.35,mat,root);
+ block(x,.22,z,.55,.43,.53,mats.gold,root);
+ block(x,2.67,z,.56,.21,.55,mats.gold,root);
+ for(let side of [-1,1])
+  block(x+side*.15,1.4,z+.20,.040,2.1,.05,mats.gold,root);
+}
+function hotelVase(root,x,z,leafMat){
+ const pot=themedMat(0x846c71);
+ const p=new THREE.Mesh(new THREE.CylinderGeometry(.28,.22,.45,10),pot);
+ p.position.set(x,.24,z);root.add(p);
+ block(x,.75,z,.055,.75,.055,leafMat,root);
+ for(let k=0;k<5;k++){
+  const a=k*Math.PI*2/5;
+  const leaf=new THREE.Mesh(hotelSharedSphere,leafMat);
+  leaf.position.set(x+Math.sin(a)*.28,1.05+Math.sin(a)*.08,z+Math.cos(a)*.28);
+  leaf.scale.set(.16,.41,.11);leaf.rotation.z=Math.sin(a)*.7;root.add(leaf);
+ }
+}
+function buildThemeProps(root,r,level,idx){
+ const x=r.x,z=r.z,theme=hotelFloorThemes[level];
+ const accent=themedMat(theme.accent),base=themedMat(theme.color),wood=mats.wood;
+ const glow=new THREE.MeshBasicMaterial({color:theme.accent});
+ const ball=(xx,yy,zz,rad=0.2,mat=accent)=>hotelFixture(root,xx,yy,zz,mat,rad);
+ const cube=(xx,yy,zz,w,h,d,mat=wood)=>block(xx,yy,zz,w,h,d,mat,root);
+ const cyl=(xx,yy,zz,w,h,mat=accent)=>{
+  const mesh=new THREE.Mesh(hotelSharedCylinder,mat);mesh.position.set(xx,yy,zz);
+  mesh.scale.set(w,h,w);root.add(mesh);return mesh;
+ };
+ // Warm lamps, plinths and architectural details per room.
+ for(const side of [-1,1]){
+  const xx=x+side*(r.w*.5-1.05),zz=z-r.d*.5+1.25;
+  cyl(xx,.42,zz,.38,.72,mats.wood);
+  cyl(xx,.86,zz,.26,.12,mats.gold);
+  ball(xx,1.08,zz,.18,glow);
+ }
+ if(idx===0||idx===4){
+  for(const side of [-1,1])hotelColumn(root,x+side*(r.w*.45),z+1.25,base);
+ }
+ // Thematic decorative models are placed along side/back walls, leaving the central path open.
+ switch(level){
+  case 3: { // Winter garden
+   const plants=themedMat(0x327d4c),flowers=themedMat(0xf7a8a5,true);
+   for(let i=0;i<4;i++)hotelVase(root,x-r.w*.35+i*(r.w*.23),z-r.d*.23,plants);
+   for(let k=0;k<6;k++)ball(x-2.2+k*.75,1.05,z-r.d*.22,.09,flowers);
+   if(idx===4){
+    for(let k=0;k<3;k++){
+     const trunk=cyl(x-2+k*2,1.15,z-1.5,.16,2.3,themedMat(0x6f5939));
+     ball(x-2+k*2,2.53,z-1.5,.83,plants);
+    }
+   }
+   break;
+  }
+  case 4: { // Kitchen and restaurant
+   cube(x-2.7,.62,z-1.6,1.4,1.1,.65,themedMat(0xb8a9a0));
+   for(let k=0;k<4;k++)cyl(x-3.2+k*.34,1.25,z-1.40,.14,.10,glow);
+   cube(x+2.3,.51,z-1.65,2.1,.22,1.20,wood);
+   for(let side of [-1,1]){
+    cyl(x+2.3+side*.65,.92,z-1.55,.17,.15,mats.gold);
+    ball(x+2.3+side*.65,1.06,z-1.55,.11,cream);
+   }
+   if(idx===4){for(let k=0;k<3;k++){cube(x-2+k*2,.5,z+1.7,1.3,.15,1.1,wood);cyl(x-2+k*2,.78,z+1.7,.25,.12,accent);}}
+   break;
+  }
+  case 5: { // Art gallery
+   for(let i=0;i<3;i++){
+    const bx=x+(i-1)*2.1;
+    cube(bx,.65,z-1.7,.76,1.12,.74,marble);
+    const statue=new THREE.Mesh(new THREE.TorusKnotGeometry(.33,.10,56,7,2,3),accent);
+    statue.position.set(bx,1.57,z-1.7);root.add(statue);
+   }
+   break;
+  }
+  case 6: { // Aquarium
+   const glass=new THREE.MeshStandardMaterial({color:0x3a9eb6,transparent:true,opacity:.46,roughness:.15,depthWrite:false});
+   for(const side of [-1,1]){
+    const bx=x+side*2.35;
+    cube(bx,1.10,z-1.6,2.05,1.75,.76,glass);
+    cube(bx,.23,z-1.6,2.14,.26,.93,wood);
+    cube(bx,2.08,z-1.6,2.14,.16,.93,mats.gold);
+    for(let k=0;k<4;k++){
+     const sx=bx+(k-1.5)*.34,sy=1.0+(k%3)*.30;
+     const fish=ball(sx,sy,z-1.15,.12,themedMat([0xf8bd7c,0x9cf2d1,0xc4bbff][k%3],true));
+     fish.scale.set(1.5,.56,.55);
+     ball(sx+.11,sy+.05,z-1.07,.017,themedMat(0x10273f));
+    }
+   }
+   break;
+  }
+  case 7: { // Library
+   for(const side of [-1,1]){
+    const bx=x+side*2.5;
+    cube(bx,1.2,z-1.8,2.2,2.3,.55,wood);
+    for(let h=0;h<3;h++){
+     const yy=.47+h*.68;
+     cube(bx,yy,z-1.46,2.05,.07,.2,mats.gold);
+     for(let k=0;k<8;k++)
+      cube(bx-.87+k*.25,yy+.29,z-1.50,.18,.49,.13,
+        themedMat([0x9e5262,0x466681,0x8a7a4c,0x72549d][(k+h)%4]));
+    }
+   }
+   break;
+  }
+  case 8: { // Theater / opera
+   const curtain=themedMat(0x8b304a);
+   for(let side of [-1,1]){
+    cube(x+side*3.4,1.5,z-1.7,.86,2.7,.44,curtain);
+    for(let k=0;k<3;k++)cube(x+side*(3.15+k*.16),1.5,z-1.40,.045,2.35,.08,mats.gold);
+   }
+   cube(x,0.18,z-2.6,3.8,.36,1.5,wood);
+   cube(x,1.55,z-3.35,4.5,2.4,.13,curtain);
+   for(let k=0;k<5;k++)cyl(x-1.6+k*.8,.25,z+.9,.23,.43,curtain);
+   break;
+  }
+  case 9: { // Clockwork
+   for(let side of [-1,1]){
+    const bx=x+side*2.6;
+    const clock=new THREE.Mesh(new THREE.CylinderGeometry(.71,.71,.11,18),mats.gold);
+    clock.rotation.x=Math.PI/2;clock.position.set(bx,1.8,z-1.70);root.add(clock);
+    const face=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,.12,18),cream);
+    face.rotation.x=Math.PI/2;face.position.set(bx,1.8,z-1.60);root.add(face);
+    cube(bx,1.8,z-1.50,.055,.76,.06,dark);
+    const hand=cube(bx+.18,1.81,z-1.50,.37,.06,.06,dark);hand.rotation.z=.52;
+    for(let k=0;k<4;k++){
+     const a=k*Math.PI/2;
+     ball(bx+Math.sin(a)*.44,1.80+Math.cos(a)*.44,z-1.52,.055,dark);
+    }
+   }
+   break;
+  }
+  case 10: { // Laboratory
+   const glass=themedMat(0x68c9d9,true),metal=themedMat(0x677d8a);
+   cube(x-2.6,.77,z-1.8,2.45,1.3,.65,metal);
+   cube(x-2.6,1.44,z-1.77,2.58,.11,.74,brass);
+   for(let k=0;k<4;k++){
+    cyl(x-3.45+k*.57,1.73,z-1.7,.15,.55,glass);
+    ball(x-3.45+k*.57,2.12,z-1.7,.13,glow);
+   }
+   cube(x+2.3,.72,z-1.8,1.8,1.35,.75,metal);
+   for(let k=0;k<6;k++)ball(x+1.8+(k%3)*.45,1.20+Math.floor(k/3)*.35,z-1.38,.08,glow);
+   break;
+  }
+  case 11: { // Ice palace
+   const ice=themedMat(0xb9e6ed,true);
+   for(let k=0;k<9;k++){
+    const bx=x-3+(k%5)*1.48,bz=z-r.d*.2+(k%3)*.28;
+    const size=.36+(k%4)*.12;
+    const crystal=new THREE.Mesh(hotelSharedGems,ice);
+    crystal.position.set(bx,.4+size,bz);crystal.scale.set(size*.68,size*2,size*.68);
+    crystal.rotation.z=.15*(k%3-1);root.add(crystal);
+   }
+   break;
+  }
+  case 12: { // Golden suite
+   const goldVelvet=themedMat(0x793b5f);
+   cube(x-2.0,.55,z-1.9,2.35,.43,.85,goldVelvet);
+   for(let side of [-1,1]){
+    ball(x-2+side*.96,.9,z-1.9,.32,goldVelvet);
+    cyl(x+2.1+side*.44,.9,z-1.85,.19,1.3,brass);
+    ball(x+2.1+side*.44,1.64,z-1.85,.19,glow);
+   }
+   cube(x+1.8,.32,z-1.9,1.65,.24,.85,wood);
+   break;
+  }
+  case 13: { // Haunted crown tower
+   const purple=themedMat(0x8d4abd,true);
+   for(let side of [-1,1]){
+    const bx=x+side*2.65;
+    cube(bx,1.25,z-1.85,1.25,1.85,.18,mats.gold);
+    cube(bx,1.25,z-1.71,1.02,1.59,.07,base);
+    const ghost=ball(bx,1.40,z-1.61,.32,purple);
+    ghost.scale.set(.8,1.25,.35);
+    for(let eye of [-1,1])ball(bx+eye*.13,1.49,z-1.40,.048,dark);
+   }
+   if(idx===4){
+    cube(x,.33,z-2.45,3.2,.64,2.2,wood);
+    cube(x,.71,z-3.0,2.8,.18,.25,mats.gold);
+    for(let k=-1;k<=1;k++){
+     const gem=new THREE.Mesh(hotelSharedGems,accent);
+     gem.position.set(x+k*.45,1.4+(k===0?.18:0),z-3.2);
+     gem.scale.set(.22,.44,.22);root.add(gem);
+    }
+   }
+   break;
+  }
+ }
+}
+function ensureHotelFloor(level){
+ if(level<=2||generatedHotelFloors.has(level))return;
+ if(level>=floors.length||level<0)throw Error('Invalid floor');
+ const shift=floors[level].shift,theme=hotelFloorThemes[level];
+ const root=new THREE.Group();scene.add(root);
+ generatedHotelFloors.set(level,root);
+ root.visible=false;
+ const gold=themedMat(theme.accent),base=themedMat(theme.color);
+ const wallpaper=getWallpaper(level);
+ for(let i=0;i<originalRooms.length;i++){
+  const src=originalRooms[i];
+  const r={...src,level,x:src.x+shift,n:hotelRoomNames[level][i]};
+  rooms.push(r);
+  block(r.x,-.24,r.z,r.w,.44,r.d,base,root);
+  const tx=makeFloorTexture(i===0?'lobby':i===4?'ball':i===2?'store':'corridor');
+  tx.repeat.set(r.w/8,r.d/8);
+  const plane=new THREE.Mesh(new THREE.PlaneGeometry(r.w-.30,r.d-.30),
+    new THREE.MeshStandardMaterial({map:tx,roughness:.61,metalness:.08}));
+  plane.rotation.x=-Math.PI/2;plane.position.set(r.x,.004,r.z);root.add(plane);
+  for(const side of [-1,1]){
+   block(r.x,.07,r.z+side*(r.d*.5-.23),r.w-.50,.12,.18,gold,root);
+   block(r.x+side*(r.w*.5-.23),.07,r.z,.18,.12,r.d-.50,gold,root);
+  }
+  buildHotelRoomBackdrop(root,r,level,i,wallpaper);
+  buildThemeProps(root,r,level,i);
+  // Stately corridor runner with geometric trim, avoiding the elevator.
+  if(i===0||i===1||i===3){
+   block(r.x,.03,r.z,2.15,.06,Math.min(6.3,r.d-1.2),themedMat(theme.color),root);
+   block(r.x,.065,r.z,1.86,.018,Math.min(6.0,r.d-1.5),gold,root);
+   block(r.x,.082,r.z,1.66,.019,Math.min(5.8,r.d-1.7),themedMat(theme.color),root);
+  }
+ }
+ for(const w of originalWalls){
+  walls.push({...w,x:w.x+shift});
+  const isHorizontal=w.w>w.d;
+  block(w.x+shift,isHorizontal?.36:1.25,w.z,w.w,isHorizontal?.72:2.5,w.d,mats.wall,root);
+ }
+ // Bright bulbs and a chandelier create an atmospheric hotel ambience.
+ for(const room of rooms.filter(r=>r.level===level)){
+  const glow=new THREE.MeshBasicMaterial({color:theme.accent});
+  const orb=new THREE.Mesh(hotelSharedSphere,glow);
+  orb.position.set(room.x,2.64,room.z);orb.scale.set(.18,.11,.18);
+  root.add(orb);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.54,.05,7,16),mats.gold);
+  ring.position.set(room.x,2.67,room.z);ring.rotation.x=Math.PI/2;root.add(ring);
+ }
+ const light=new THREE.PointLight(theme.accent,1.5,16,2);
+ light.position.set(shift,2.7,-10);root.add(light);
+ makeElevator(level,root);
 }
 
 // Zaokraglony, autorski low-poly bohater 3D w klimacie przygody w nawiedzonym hotelu.
